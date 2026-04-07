@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
 from dotenv import load_dotenv
 from datetime import date, datetime
 import os
 import database
 from pytz import timezone
+from openpyxl import Workbook
+from io import BytesIO
 
 load_dotenv()
 
@@ -98,6 +100,74 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/export", methods=["GET"])
+@login_required
+def export():
+    # Get all dates from database
+    all_dates = database.get_all_dates()
+
+    if not all_dates:
+        flash("No data to export.", "error")
+        return redirect(url_for("index"))
+
+    # Create a workbook
+    wb = Workbook()
+    wb.remove(wb.active)  # Remove default sheet
+
+    from openpyxl.styles import Font, PatternFill
+
+    # Create a sheet for each date
+    for export_date in all_dates:
+        entries = database.get_entries_by_date(export_date)
+        total = database.get_total_calories(export_date)
+
+        # Create sheet with date as name
+        ws = wb.create_sheet(title=export_date)
+
+        # Add headers
+        headers = ["Food Item", "Calories", "Time"]
+        ws.append(headers)
+
+        # Style headers
+        header_fill = PatternFill(start_color="FF8B5000",
+                                  end_color="FF8B5000", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+
+        # Add data rows
+        for entry in entries:
+            ws.append([
+                entry["food_item"],
+                entry["calories"],
+                entry["created_at"][:16]
+            ])
+
+        # Add total row
+        ws.append(["Total", total, ""])
+        total_fill = PatternFill(start_color="FFFF9E64",
+                                 end_color="FFFF9E64", fill_type="solid")
+        total_font = Font(bold=True)
+        for cell in ws[ws.max_row]:
+            cell.fill = total_fill
+            cell.font = total_font
+
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 18
+
+    # Save to BytesIO and send
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+
+    filename = "calories_all_dates.xlsx"
+    return send_file(excel_file, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
 
 
 if __name__ == "__main__":
