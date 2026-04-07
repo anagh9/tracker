@@ -4,6 +4,17 @@
 <!-- Top nav -->
 <nav class="border-b border-stone-200 bg-white px-6 py-4 flex items-center justify-between">
   <span class="mono text-lg font-medium text-stone-900">cal<span class="text-orange-500">track</span></span>
+  
+  <!-- Search by date -->
+  <form method="GET" action="/" class="flex items-center gap-2">
+    <input type="date" name="date" value="{{ selected_date }}"
+      class="border border-stone-200 rounded-lg px-3 py-1.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition mono">
+    <button type="submit"
+      class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">
+      Go
+    </button>
+  </form>
+  
   <a href="/logout" class="text-xs text-stone-400 hover:text-stone-600 transition">logout</a>
 </nav>
 
