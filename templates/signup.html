@@ -6,7 +6,7 @@
     <!-- Logo -->
     <div class="mb-10 text-center">
       <span class="mono text-2xl font-medium tracking-tight text-stone-900">cal<span class="text-orange-500">track</span></span>
-      <p class="text-sm text-stone-400 mt-1">daily calorie journal</p>
+      <p class="text-sm text-stone-400 mt-1">create your account</p>
     </div>
 
     <!-- Flash messages -->
@@ -22,25 +22,38 @@
         <label class="block text-xs font-medium text-stone-500 mb-1 uppercase tracking-widest">Username</label>
         <input type="text" name="username" required
           class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
-          placeholder="your username">
+          placeholder="choose a username">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-stone-500 mb-1 uppercase tracking-widest">Email</label>
+        <input type="email" name="email" required
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
+          placeholder="your email">
       </div>
       <div>
         <label class="block text-xs font-medium text-stone-500 mb-1 uppercase tracking-widest">Password</label>
         <input type="password" name="password" required
           class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
           placeholder="••••••••">
+        <p class="text-xs text-stone-400 mt-1">at least 6 characters</p>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-stone-500 mb-1 uppercase tracking-widest">Confirm Password</label>
+        <input type="password" name="confirm_password" required
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
+          placeholder="••••••••">
       </div>
       <button type="submit"
         class="w-full bg-stone-900 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-stone-700 transition mt-2">
-        Sign in →
+        Create Account →
       </button>
     </form>
 
-    <!-- Signup Link -->
+    <!-- Login Link -->
     <div class="mt-6 text-center">
       <p class="text-sm text-stone-600">
-        Don't have an account? 
-        <a href="/signup" class="text-orange-500 hover:text-orange-600 font-medium">Sign up</a>
+        Already have an account? 
+        <a href="/login" class="text-orange-500 hover:text-orange-600 font-medium">Sign in</a>
       </p>
     </div>
   </div>

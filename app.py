@@ -6,6 +6,7 @@ import database
 from pytz import timezone
 from openpyxl import Workbook
 from io import BytesIO
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
@@ -14,16 +15,13 @@ app.secret_key = os.getenv("SECRET_KEY", "fallback-secret")
 
 database.init_db()
 
-USERNAME = os.getenv("IDENTITY")
-PASSWORD = os.getenv("PASSWORD")
-
 
 def login_required(f):
     from functools import wraps
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "logged_in" not in session:
+        if "user_id" not in session:
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
@@ -32,12 +30,14 @@ def login_required(f):
 @app.route("/", methods=["GET"])
 @login_required
 def index():
+    user_id = session["user_id"]
+    user = database.get_user_by_id(user_id)
     india = timezone("Asia/Kolkata")
     selected_date = request.args.get(
         "date", datetime.now(india).date().isoformat())
-    entries = database.get_entries_by_date(selected_date)
-    total = database.get_total_calories(selected_date)
-    all_dates = database.get_all_dates()
+    entries = database.get_entries_by_date(user_id, selected_date)
+    total = database.get_total_calories(user_id, selected_date)
+    all_dates = database.get_all_dates(user_id)
     today = datetime.now(india).date().isoformat()
 
     # Ensure today is always in the date list for the sidebar
@@ -50,13 +50,15 @@ def index():
         selected_date=selected_date,
         total=total,
         all_dates=all_dates,
-        today=today
+        today=today,
+        username=user["username"] if user else "User"
     )
 
 
 @app.route("/add", methods=["POST"])
 @login_required
 def add():
+    user_id = session["user_id"]
     food_item = request.form.get("food_item", "").strip()
     calories = request.form.get("calories", "").strip()
     entry_date = request.form.get("entry_date", date.today().isoformat())
@@ -73,27 +75,71 @@ def add():
         flash("Calories must be a positive number.", "error")
         return redirect(url_for("index", date=entry_date))
 
-    database.add_entry(entry_date, food_item, calories)
+    database.add_entry(user_id, entry_date, food_item, calories)
     return redirect(url_for("index", date=entry_date))
 
 
 @app.route("/delete/<int:entry_id>", methods=["POST"])
 @login_required
 def delete(entry_id):
+    user_id = session["user_id"]
     entry_date = request.form.get("entry_date", date.today().isoformat())
-    database.delete_entry(entry_id)
+    database.delete_entry(entry_id, user_id)
     return redirect(url_for("index", date=entry_date))
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        if (request.form.get("username") == USERNAME and
-                request.form.get("password") == PASSWORD):
-            session["logged_in"] = True
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        
+        user = database.get_user_by_username(username)
+        
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["id"]
+            flash(f"Welcome back, {user['username']}!", "success")
             return redirect(url_for("index"))
-        flash("Invalid credentials.", "error")
+        
+        flash("Invalid username or password.", "error")
+    
     return render_template("login.html")
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+        
+        # Validation
+        if not username or not email or not password:
+            flash("All fields are required.", "error")
+            return redirect(url_for("signup"))
+        
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+            return redirect(url_for("signup"))
+        
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return redirect(url_for("signup"))
+        
+        # Create user
+        password_hash = generate_password_hash(password)
+        user_id = database.create_user(username, email, password_hash)
+        
+        if user_id:
+            session["user_id"] = user_id
+            flash(f"Welcome, {username}! Your account has been created.", "success")
+            return redirect(url_for("index"))
+        else:
+            flash("Username or email already exists.", "error")
+            return redirect(url_for("signup"))
+    
+    return render_template("signup.html")
 
 
 @app.route("/logout")
@@ -105,8 +151,9 @@ def logout():
 @app.route("/export", methods=["GET"])
 @login_required
 def export():
-    # Get all dates from database
-    all_dates = database.get_all_dates()
+    user_id = session["user_id"]
+    # Get all dates from database for this user
+    all_dates = database.get_all_dates(user_id)
 
     if not all_dates:
         flash("No data to export.", "error")
@@ -120,8 +167,8 @@ def export():
 
     # Create a sheet for each date
     for export_date in all_dates:
-        entries = database.get_entries_by_date(export_date)
-        total = database.get_total_calories(export_date)
+        entries = database.get_entries_by_date(user_id, export_date)
+        total = database.get_total_calories(user_id, export_date)
 
         # Create sheet with date as name
         ws = wb.create_sheet(title=export_date)
