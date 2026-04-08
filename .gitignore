@@ -10,3 +10,4 @@ instance/
 venv/
 env/
 ENV/
+.env

@@ -76,6 +76,17 @@ def get_user_by_id(user_id):
     return user
 
 
+def get_user_by_email(email):
+    """Get user by email address for OAuth login"""
+    conn = get_connection()
+    user = conn.execute(
+        "SELECT id, username, email FROM users WHERE email = ?",
+        (email,)
+    ).fetchone()
+    conn.close()
+    return user
+
+
 # Entry Management Functions (user-specific)
 def get_entries_by_date(user_id, entry_date):
     conn = get_connection()

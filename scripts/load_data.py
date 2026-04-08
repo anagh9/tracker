@@ -12,7 +12,6 @@ from database import add_entry
 # Define the range of dates (from 01 March to 01 April)
 start_date = datetime(2026, 3, 1)
 end_date = datetime(2026, 4, 1)
-
 # List of random food items
 food_items = [
     "Apple", "Banana", "Orange", "Pizza", "Burger", "Salad", "Pasta", "Rice", "Chicken", "Fish",
