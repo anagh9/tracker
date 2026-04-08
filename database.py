@@ -69,7 +69,7 @@ def get_user_by_username(username):
 def get_user_by_id(user_id):
     conn = get_connection()
     user = conn.execute(
-        "SELECT id, username, email FROM users WHERE id = ?",
+        "SELECT id, username, email, password_hash FROM users WHERE id = ?",
         (user_id,)
     ).fetchone()
     conn.close()
@@ -85,6 +85,21 @@ def get_user_by_email(email):
     ).fetchone()
     conn.close()
     return user
+
+
+def update_user_password(user_id, password_hash):
+    """Update user password"""
+    try:
+        conn = get_connection()
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (password_hash, user_id)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
 
 
 # Entry Management Functions (user-specific)

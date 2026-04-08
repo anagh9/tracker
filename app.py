@@ -64,7 +64,8 @@ def index():
         total=total,
         all_dates=all_dates,
         today=today,
-        username=user["username"] if user else "User"
+        username=user["username"] if user else "User",
+        is_oauth_user=session.get("auth_method") == "google"
     )
 
 
@@ -201,6 +202,61 @@ def export():
     return send_file(excel_file, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
 
 
+@app.route("/change-password", methods=["POST"])
+@login_required
+def change_password():
+    """Handle password change request"""
+    user_id = session["user_id"]
+    user = database.get_user_by_id(user_id)
+    is_oauth_user = session.get("auth_method") == "google"
+    
+    current_password = request.form.get("current_password", "").strip()
+    new_password = request.form.get("new_password", "").strip()
+    confirm_password = request.form.get("confirm_password", "").strip()
+    
+    # Validation
+    if not new_password or not confirm_password:
+        flash("Password fields are required.", "error")
+        return redirect(url_for("index"))
+    
+    # For non-OAuth users, verify current password
+    if not is_oauth_user:
+        if not current_password:
+            flash("Current password is required.", "error")
+            return redirect(url_for("index"))
+        
+        # Verify current password
+        if not check_password_hash(user["password_hash"], current_password):
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("index"))
+    
+    # Check password length
+    if len(new_password) < 6:
+        flash("New password must be at least 6 characters.", "error")
+        return redirect(url_for("index"))
+    
+    # Check passwords match
+    if new_password != confirm_password:
+        flash("New passwords do not match.", "error")
+        return redirect(url_for("index"))
+    
+    # Check if new password is same as old password (only for non-OAuth users)
+    if not is_oauth_user and check_password_hash(user["password_hash"], new_password):
+        flash("New password must be different from current password.", "error")
+        return redirect(url_for("index"))
+    
+    # Update password in database
+    password_hash = generate_password_hash(new_password)
+    success = database.update_user_password(user_id, password_hash)
+    
+    if success:
+        flash("Password changed successfully!", "success")
+    else:
+        flash("Failed to change password. Please try again.", "error")
+    
+    return redirect(url_for("index"))
+
+
 @app.route("/auth/google")
 def auth_google():
     """Initiate Google OAuth flow"""
@@ -288,6 +344,7 @@ def auth_google_callback():
         if user:
             # Existing user, log them in
             session["user_id"] = user["id"]
+            session["auth_method"] = "google"
             flash(f"Welcome back, {user['username']}!", "success")
             return redirect(url_for("index"))
         else:
@@ -308,6 +365,7 @@ def auth_google_callback():
             
             if user_id:
                 session["user_id"] = user_id
+                session["auth_method"] = "google"
                 flash(f"Welcome, {username}! Your account has been created via Google Sign-In.", "success")
                 return redirect(url_for("index"))
             else:
