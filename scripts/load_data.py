@@ -32,7 +32,7 @@ while current_date < end_date:
     for _ in range(10):  # Add 10 items per day
         food_item = random.choice(food_items)
         calories = random_calories()
-        add_entry(current_date.date().isoformat(),
+        add_entry(1, current_date.date().isoformat(),
                   food_item, calories)
     current_date += timedelta(days=1)
 
