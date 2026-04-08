@@ -2,6 +2,7 @@
 Calorie Tracker Routes Blueprint
 """
 
+from flask import send_file
 from datetime import datetime
 import re
 
@@ -95,7 +96,6 @@ def delete(entry_id):
 def export():
     """Export entries to Excel"""
     user_id = session["user_id"]
-    user = database.get_user_by_id(user_id)
     all_dates = database.get_all_dates(user_id)
 
     # Create workbook
@@ -104,51 +104,42 @@ def export():
     ws.title = "Calorie Entries"
 
     # Headers
-    ws["A1"] = "Date"
-    ws["B1"] = "Food Item"
-    ws["C1"] = "Calories"
-    ws["D1"] = "Time"
-
-    # Style headers
     from openpyxl.styles import Font, PatternFill
-    header_font = Font(bold=True)
-    header_fill = PatternFill(start_color="FFA500",
-                              end_color="FFA500", fill_type="solid")
-
-    for col in ["A1", "B1", "C1", "D1"]:
-        ws[col].font = header_font
-        ws[col].fill = header_fill
+    headers = ["Date", "Food Item", "Calories", "Time"]
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="FFA500",
+                                end_color="FFA500", fill_type="solid")
 
     # Data
     row = 2
     for entry_date in all_dates:
         entries = database.get_entries_by_date(user_id, entry_date)
         for entry in entries:
-            ws[f"A{row}"] = entry_date
-            ws[f"B{row}"] = entry["food_item"]
-            ws[f"C{row}"] = entry["calories"]
-            ws[f"D{row}"] = entry["created_at"][:16]
+            ws.cell(row=row, column=1, value=entry_date)
+            ws.cell(row=row, column=2, value=entry["food_item"])
+            ws.cell(row=row, column=3, value=entry["calories"])
+            ws.cell(row=row, column=4, value=entry["created_at"][:16])
             row += 1
 
-    # Auto-fit columns
+    # Column widths
     ws.column_dimensions["A"].width = 12
     ws.column_dimensions["B"].width = 25
     ws.column_dimensions["C"].width = 10
     ws.column_dimensions["D"].width = 16
 
-    # Save to BytesIO
+    # ── Fix: save to BytesIO then rewind before send_file ─────────────
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
-    return Response(
-        output.getvalue(),
+    return send_file(
+        output,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f"attachment; filename=calorie_tracker_{date.today()}.xlsx"
-        }
+        as_attachment=True,
+        download_name=f"calorie_tracker_{date.today()}.xlsx"
     )
-
 
 def validate_food_input(food_input: str) -> tuple[bool, str | None]:
     """
