@@ -1,48 +1,269 @@
-# Calorie Calculator
+# CalTrack - Calorie Tracker
 
-This project is a simple web-based calorie calculator application built using Python. It allows users to log in, view their dashboard, and calculate their calorie intake.
+A modern, responsive web application for tracking daily calorie intake with user authentication, data visualization, and export functionality.
 
-## Features
-- User authentication (login page)
-- Dashboard to display calorie-related data
-- Base template for consistent UI design
+## ✨ Features
 
-## File Structure
+### Core Functionality
+- 🔐 **User Authentication** - Secure login & signup system
+- 📊 **Dashboard** - Track daily calorie intake with interactive visualizations
+- 📈 **Pie Chart Visualization** - See food distribution by calories
+- 🧮 **Calorie Calculator** - Calculate daily calorie needs (Mifflin-St Jeor formula)
+- 📅 **History** - Browse and select entries from any date
+- 💾 **Export** - Download all entries as Excel file
+- 📱 **Responsive Design** - Works seamlessly on mobile, tablet, and desktop
+- 🎨 **Modern UI** - Clean, minimalist design with smooth animations
+
+### User Management
+- User-isolated data (each user sees only their entries)
+- Secure password hashing with Werkzeug
+- Account creation with email validation
+- User profile in sidebar
+
+## 📁 Project Structure
+
 ```
-app.py               # Main application file
-database.py          # Handles database interactions
-requirements.txt     # Python dependencies
-templates/           # HTML templates for the application
-  base.html          # Base template for consistent layout
-  dashboard.html     # Dashboard page
-  login.html         # Login page
+tracker/
+├── app.py                      # Flask application & routes
+├── database.py                 # SQLite database management
+├── requirements.txt            # Python dependencies
+├── calories.db                 # SQLite database
+├── README.md                   # This file
+│
+├── assets/                     # Static assets
+│   └── [images]
+│
+├── scripts/                    # Utility scripts
+│   ├── __init__.py
+│   ├── load_data.py           # Sample data loader
+│   ├── migrate_add_user_id.py              # Migration script (auto)
+│   ├── migrate_add_user_id_manual.py       # Migration script (manual)
+│   └── MIGRATION.md           # Migration documentation
+│
+└── templates/                  # HTML templates
+    ├── base.html              # Base template with Chart.js
+    ├── dashboard.html         # Main dashboard
+    ├── login.html             # Login page
+    └── signup.html            # Signup page
 ```
 
-## Setup Instructions
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   ```
+## 🚀 Quick Start
 
-2. Navigate to the project directory:
-   ```bash
-   cd 03_calorie_calulator
-   ```
+### 1. Clone & Setup
+```bash
+git clone <repository-url>
+cd tracker
+pip install -r requirements.txt
+```
 
-3. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. Run the Application
+```bash
+python app.py
+```
 
-4. Run the application:
-   ```bash
-   python app.py
-   ```
+Visit `http://127.0.0.1:5000` in your browser.
 
-5. Open your browser and navigate to `http://127.0.0.1:5000`.
+### 3. Create an Account
+- Click "Sign up" on the login page
+- Enter username, email, and password
+- Start tracking your calories!
 
-## Assets
-![Alt text](assets/image.png)
+## 🔧 Installation Details
 
-## License
-This project is licensed under the MIT License. Feel free to use and modify it as needed.
+### Prerequisites
+- Python 3.7+
+- pip
+
+### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+**Required packages:**
+- Flask 3.0.3 - Web framework
+- python-dotenv 1.0.1 - Environment variables
+- pytz - Timezone support
+- openpyxl - Excel export
+- Werkzeug 3.0.1 - Password hashing
+- Chart.js 4.4.0 - Data visualization (CDN)
+
+## 📊 Database Schema
+
+### Users Table
+```sql
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+### Entries Table
+```sql
+CREATE TABLE entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    entry_date TEXT NOT NULL,
+    food_item TEXT NOT NULL,
+    calories INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+)
+```
+
+## 🔄 Database Migration
+
+If you're upgrading from a version without user authentication:
+
+### Automatic Migration (Recommended)
+```bash
+python scripts/migrate_add_user_id.py
+```
+
+### Manual Migration (Choose specific user)
+```bash
+python scripts/migrate_add_user_id_manual.py
+```
+
+See [scripts/MIGRATION.md](scripts/MIGRATION.md) for detailed migration instructions.
+
+## 🎯 Usage Guide
+
+### Dashboard
+
+1. **Daily Overview**
+   - See total calories consumed
+   - View pie chart of food distribution
+   - Check average calories per item
+
+2. **Add Entry**
+   - Type food name
+   - Enter calories
+   - Click "Add" button
+
+3. **History**
+   - Click "History" in sidebar
+   - Select any past date
+   - View entries for that day
+
+4. **Calorie Calculator**
+   - Click "Calculator" in sidebar
+   - Enter age, height, weight, activity level
+   - Get daily calorie recommendations
+
+5. **Export Data**
+   - Click "Export" to download Excel file
+   - Contains all entries with totals
+
+### Sidebar Navigation
+
+- 🏠 **Dashboard** - Main tracking view
+- 🕐 **History** - Browse past entries
+- 🧮 **Calculator** - Calculate daily needs
+- 📥 **Export** - Download data
+- 👤 **User Profile** - Your account info
+- 🚪 **Logout** - Sign out
+
+## 🔐 Security Features
+
+- **Password Hashing** - Werkzeug's secure_password functions
+- **Session Management** - secure_key based sessions
+- **User Isolation** - Users only see their own data
+- **Unique Constraints** - Prevent duplicate usernames/emails
+- **Foreign Keys** - Referential integrity
+
+## 📱 Responsive Design
+
+Works perfectly on:
+- 📱 Mobile phones (320px+)
+- 📱 Tablets (768px+)
+- 🖥️  Desktops (1024px+)
+
+Features:
+- Mobile hamburger menu
+- Adaptive grid layouts
+- Touch-friendly buttons
+- Responsive typography
+
+## 🎨 Technology Stack
+
+**Frontend:**
+- HTML5
+- Tailwind CSS (CDN)
+- Chart.js (pie charts)
+- Vanilla JavaScript
+
+**Backend:**
+- Flask 3.0.3
+- SQLite3
+- Python 3.7+
+
+**Tools:**
+- Flask-Style routing
+- Jinja2 templating
+
+## 📋 Environment Variables
+
+Create `.env` file in project root:
+
+```env
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+IDENTITY=admin
+PASSWORD=admin
+```
+
+**Note:** The `IDENTITY` and `PASSWORD` variables are legacy and replaced by user authentication.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Issue: "Row object is not JSON serializable"**
+- ✓ Fixed in app.py - entries are converted to dictionaries
+
+**Issue: "Cannot delete entries"**
+- Ensure you're on today's date
+- Check user_id matches your account
+
+**Issue: Pie chart not showing**
+- Make sure there are entries for the day
+- Check browser console for JavaScript errors
+
+**Issue: Export file empty**
+- Ensure you have entries in your account
+- Try adding an entry first
+
+### Debug Mode
+
+Enable Flask debug mode:
+```bash
+export FLASK_ENV=development
+python app.py
+```
+
+## 📈 Features Roadmap
+
+Future enhancements:
+- [ ] Weight tracking integration
+- [ ] Nutrition breakdown (protein, carbs, fats)
+- [ ] Goal setting & progress tracking
+- [ ] Mobile app
+- [ ] Social sharing
+- [ ] API for external tools
+
+## 📄 License
+
+MIT License - Free to use and modify.
+
+## 👤 Author
+
+Created with ❤️ for calorie tracking enthusiasts.
+
+---
+
+**Version:** 1.1.0  
+**Last Updated:** April 8, 2026  
+**Status:** Active Development
