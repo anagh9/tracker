@@ -36,6 +36,8 @@ def index():
     selected_date = request.args.get(
         "date", datetime.now(india).date().isoformat())
     entries = database.get_entries_by_date(user_id, selected_date)
+    # Convert Row objects to dictionaries for JSON serialization
+    entries = [dict(entry) for entry in entries]
     total = database.get_total_calories(user_id, selected_date)
     all_dates = database.get_all_dates(user_id)
     today = datetime.now(india).date().isoformat()

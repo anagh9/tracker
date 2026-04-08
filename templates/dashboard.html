@@ -1,11 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="flex h-screen bg-stone-50">
+<div id="dashContainer" class="flex h-screen bg-stone-50 overflow-hidden">
+
+  <!-- Sidebar Overlay (Mobile) -->
+  <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="closeSidebar()"></div>
 
   <!-- LEFT SIDEBAR NAVIGATION -->
-  <aside class="w-64 bg-white border-r border-stone-200 shadow-sm flex flex-col">
+  <aside id="sidebar" class="w-64 bg-white border-r border-stone-200 shadow-sm flex flex-col fixed lg:static lg:w-64 h-full -left-64 lg:left-0 transition-all duration-300 z-40">
     
+    <!-- Close Button (Mobile) -->
+    <button onclick="closeSidebar()" class="absolute top-4 right-4 lg:hidden p-2 hover:bg-stone-100 rounded-lg transition">
+      <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
     <!-- Logo Section -->
     <div class="px-6 py-6 border-b border-stone-200">
       <div class="flex items-center gap-2">
@@ -18,12 +28,12 @@
     </div>
 
     <!-- Navigation Items -->
-    <nav class="flex-1 px-3 py-6 space-y-2">
+    <nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
       
       <!-- Dashboard -->
       <a href="/" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
                          bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200">
-        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 13l4-8m4 8V5m0 0H7m0 0L3 9" />
         </svg>
         <span class="font-medium text-sm">Dashboard</span>
@@ -32,11 +42,11 @@
       <!-- History -->
       <button onclick="toggleHistoryNav()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
                                                   text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="font-medium text-sm">History</span>
-        <svg id="historyIcon" class="w-4 h-4 ml-auto transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg id="historyIcon" class="w-4 h-4 ml-auto flex-shrink-0 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
@@ -44,14 +54,14 @@
       <!-- History Submenu -->
       <div id="historyMenu" class="hidden pl-4 space-y-1 max-h-48 overflow-y-auto">
         {% for d in all_dates %}
-        <a href="/?date={{ d }}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
+        <a href="/?date={{ d }}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm
                                         {% if d == selected_date %}bg-orange-50 text-orange-600 border-l-2 border-orange-500 font-medium{% else %}text-stone-600 hover:bg-stone-100{% endif %}">
           {% if d == today %}
-            <span class="text-xs">📌</span>
-            <span class="mono text-sm font-medium">Today</span>
+            <span>📌</span>
+            <span class="mono font-medium">Today</span>
           {% else %}
-            <span class="text-xs">📄</span>
-            <span class="mono text-sm">{{ d }}</span>
+            <span>📄</span>
+            <span class="mono truncate">{{ d }}</span>
           {% endif %}
         </a>
         {% endfor %}
@@ -60,17 +70,17 @@
       <!-- Calculator -->
       <button onclick="openCalculatorModal()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
                                                     text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
         <span class="font-medium text-sm">Calculator</span>
-        <span class="ml-auto text-lg">🧮</span>
+        <span class="ml-auto text-lg flex-shrink-0">🧮</span>
       </button>
 
       <!-- Export -->
       <a href="/export" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
                               text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
         </svg>
         <span class="font-medium text-sm">Export</span>
@@ -83,14 +93,14 @@
       
       <!-- User Card -->
       <div class="bg-stone-50 rounded-lg p-3 border border-stone-200">
-        <div class="flex items-center gap-3 mb-3">
+        <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 
-                      flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                      flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
             {{ username[0:2].upper() }}
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-stone-900 truncate">{{ username }}</p>
-            <p class="text-xs text-stone-500 truncate">User</p>
+            <p class="text-xs text-stone-500">User</p>
           </div>
         </div>
       </div>
@@ -107,27 +117,35 @@
   </aside>
 
   <!-- MAIN CONTENT AREA -->
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div class="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
     
     <!-- TOP HEADER -->
-    <header class="bg-white border-b border-stone-200 px-8 py-5 shadow-sm">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-stone-900">
+    <header class="bg-white border-b border-stone-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4">
+        <!-- Left side: Title -->
+        <div class="min-w-0 flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold text-stone-900 truncate">
             {% if selected_date == today %}Today's Tracking{% else %}{{ selected_date }}{% endif %}
           </h1>
-          <p class="text-sm text-stone-500 mt-1 mono">{{ selected_date }}</p>
+          <p class="text-xs sm:text-sm text-stone-500 mt-1 mono">{{ selected_date }}</p>
         </div>
+
+        <!-- Mobile Menu Button -->
+        <button onclick="openSidebar()" class="lg:hidden flex-shrink-0 p-2 hover:bg-stone-100 rounded-lg transition">
+          <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
         
         <!-- Quick Date Selector -->
-        <form method="GET" action="/" class="flex items-center gap-2">
+        <form method="GET" action="/" class="flex items-center gap-2 flex-shrink-0">
           <input type="date" name="date" value="{{ selected_date }}"
-            class="border border-stone-200 rounded-lg px-4 py-2 text-sm bg-stone-50 
+            class="border border-stone-200 rounded-lg px-2 sm:px-4 py-2 text-xs sm:text-sm bg-stone-50 
                    focus:outline-none focus:ring-2 focus:ring-orange-400 
                    focus:bg-white transition">
           <button type="submit"
-            class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium 
-                   px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md">
+            class="bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium 
+                   px-2 sm:px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md flex-shrink-0">
             Go
           </button>
         </form>
@@ -136,7 +154,7 @@
 
     <!-- SCROLLABLE CONTENT -->
     <main class="flex-1 overflow-y-auto">
-      <div class="p-8 max-w-4xl">
+      <div class="p-4 sm:p-6 lg:p-8 max-w-6xl">
 
         <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -147,28 +165,76 @@
 
         <!-- Calorie Summary Card -->
         <div class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6 shadow-sm">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Daily Total</p>
-              <p class="mono text-5xl font-bold text-orange-600">{{ total }}</p>
+              <p class="mono text-4xl sm:text-5xl font-bold text-orange-600">{{ total }}</p>
               <p class="text-sm text-stone-600 mt-1">kcal consumed</p>
             </div>
-            <div class="text-7xl opacity-20">🔥</div>
+            <div class="text-6xl sm:text-7xl opacity-20">🔥</div>
           </div>
         </div>
+
+        <!-- Charts Section -->
+        {% if entries %}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <!-- Pie Chart -->
+          <div class="lg:col-span-1 bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <p class="text-sm font-semibold text-stone-700 mb-4">Food Distribution</p>
+            <div class="relative h-64 flex items-center justify-center">
+              <canvas id="foodChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="lg:col-span-2 grid grid-cols-2 gap-4">
+            <!-- Most Consumed -->
+            <div id="mostConsumedCard" class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
+              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Most Consumed</p>
+              <p class="text-lg font-bold text-stone-900" id="mostConsumedItem">-</p>
+              <p class="text-xs text-stone-500 mt-1" id="mostConsumedCals">0 kcal</p>
+            </div>
+
+            <!-- Items Count -->
+            <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
+              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Items Logged</p>
+              <p class="text-lg font-bold text-stone-900">{{ entries|length }}</p>
+              <p class="text-xs text-stone-500 mt-1">food items</p>
+            </div>
+
+            <!-- Average per Item -->
+            <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
+              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Average/Item</p>
+              <p class="text-lg font-bold text-stone-900" id="avgPerItem">
+                {% if entries %}{{ (total / entries|length)|int }}{% else %}0{% endif %}
+              </p>
+              <p class="text-xs text-stone-500 mt-1">kcal per item</p>
+            </div>
+
+            <!-- Remaining (Placeholder) -->
+            <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
+              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Progress</p>
+              <div class="w-full bg-stone-200 rounded-full h-2 mt-2">
+                <div class="bg-orange-500 h-2 rounded-full" style="width: {% if total > 2500 %}100{% else %}{{ (total / 2500 * 100)|int }}{% endif %}%"></div>
+              </div>
+              <p class="text-xs text-stone-500 mt-2" id="progressText">{{ total }} / 2500 kcal</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
 
         <!-- Add Entry Form -->
         {% if selected_date == today %}
         <div class="bg-white border border-stone-200 rounded-xl p-6 mb-6 shadow-sm">
           <p class="text-xs text-stone-400 uppercase tracking-widest font-semibold mb-4">Add New Entry</p>
-          <form method="POST" action="/add" class="flex gap-3 flex-wrap">
+          <form method="POST" action="/add" class="flex flex-col sm:flex-row gap-3">
             <input type="hidden" name="entry_date" value="{{ selected_date }}">
             <input type="text" name="food_item" placeholder="What did you eat?" required
-              class="flex-1 min-w-[200px] border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition">
+              class="flex-1 min-w-0 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition">
             <input type="number" name="calories" placeholder="kcal" required min="1"
-              class="w-28 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
+              class="w-full sm:w-28 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
             <button type="submit"
-              class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm hover:shadow-md">
+              class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap">
               + Add
             </button>
           </form>
@@ -179,13 +245,13 @@
         <div class="space-y-2">
           {% if entries %}
             {% for entry in entries %}
-            <div class="bg-white border border-stone-200 rounded-lg px-5 py-4 flex items-center justify-between group hover:shadow-md transition-all duration-200">
-              <div>
-                <p class="text-sm font-semibold text-stone-800">{{ entry["food_item"] }}</p>
+            <div class="bg-white border border-stone-200 rounded-lg px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:shadow-md transition-all duration-200">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-stone-800 truncate">{{ entry["food_item"] }}</p>
                 <p class="mono text-xs text-stone-400 mt-1">{{ entry["created_at"][:16] }}</p>
               </div>
-              <div class="flex items-center gap-4">
-                <span class="mono text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg">{{ entry["calories"] }} kcal</span>
+              <div class="flex items-center gap-4 flex-shrink-0">
+                <span class="mono text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg whitespace-nowrap">{{ entry["calories"] }} kcal</span>
                 {% if selected_date == today %}
                 <form method="POST" action="/delete/{{ entry['id'] }}">
                   <input type="hidden" name="entry_date" value="{{ selected_date }}">
@@ -199,8 +265,8 @@
             </div>
             {% endfor %}
           {% else %}
-            <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-12 text-center">
-              <p class="text-5xl mb-3">🍽️</p>
+            <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-8 sm:p-12 text-center">
+              <p class="text-4xl sm:text-5xl mb-3">🍽️</p>
               <p class="text-stone-500 font-medium">No entries yet for this day</p>
               <p class="text-xs text-stone-400 mt-2">Start tracking by adding your first meal</p>
             </div>
@@ -307,6 +373,23 @@
 
 <!-- JavaScript -->
 <script>
+  // Sidebar Toggle
+  function openSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.add('left-0');
+    sidebar.classList.remove('-left-64');
+    overlay.classList.remove('hidden');
+  }
+
+  function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.remove('left-0');
+    sidebar.classList.add('-left-64');
+    overlay.classList.add('hidden');
+  }
+
   // History Navigation Toggle
   function toggleHistoryNav() {
     const menu = document.getElementById('historyMenu');
@@ -314,6 +397,76 @@
     menu.classList.toggle('hidden');
     icon.classList.toggle('rotate-90');
   }
+
+  // Initialize Pie Chart
+  function initializeFoodChart() {
+    const chartCanvas = document.getElementById('foodChart');
+    if (!chartCanvas) return;
+
+    const entries = {{ entries|tojson }};
+    
+    if (entries.length === 0) return;
+
+    // Prepare data
+    const labels = entries.map(e => e.food_item);
+    const data = entries.map(e => e.calories);
+    
+    // Color palette
+    const colors = [
+      '#f97316', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa',
+      '#f472b6', '#fb923c', '#fcd34d', '#4ade80', '#22d3ee',
+      '#3b82f6', '#d946ef', '#ec4899', '#f59e0b', '#8b5cf6'
+    ];
+
+    new Chart(chartCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.slice(0, data.length),
+          borderColor: '#ffffff',
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: { size: 12 },
+              padding: 15,
+              usePointStyle: true,
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return label + ': ' + value + ' kcal (' + percentage + '%)';
+              }
+            }
+          }
+        },
+        layout: {
+          padding: 0
+        }
+      }
+    });
+
+    // Find most consumed item
+    const maxIndex = data.indexOf(Math.max(...data));
+    document.getElementById('mostConsumedItem').textContent = labels[maxIndex];
+    document.getElementById('mostConsumedCals').textContent = data[maxIndex] + ' kcal';
+  }
+
+  // Run on page load
+  document.addEventListener('DOMContentLoaded', initializeFoodChart);
 
   // Calculator Modal Functions
   function openCalculatorModal() {
@@ -326,7 +479,7 @@
     document.body.style.overflow = 'auto';
   }
 
-  // Calculate Daily Calories using Mifflin-St Jeor Formula
+  // Calculate Daily Calories
   function calculateCalories() {
     const age = parseFloat(document.getElementById('age').value);
     const height = parseFloat(document.getElementById('height').value);
@@ -363,14 +516,13 @@
     resultContainer.classList.remove('hidden');
   }
 
-  // Allow Enter key to calculate
+  // Keyboard shortcuts
   document.addEventListener('keypress', function(e) {
     if (e.key === 'Enter' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
       calculateCalories();
     }
   });
 
-  // Close modal on Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
       closeCalculatorModal();
