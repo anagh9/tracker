@@ -69,6 +69,23 @@ def init_db():
         )
     """)
     
+    # Nutrient breakdown cache table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS nutrient_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            entry_date TEXT NOT NULL,
+            protein_grams REAL NOT NULL,
+            carbs_grams REAL NOT NULL,
+            fats_grams REAL NOT NULL,
+            fiber_grams REAL NOT NULL,
+            analysis TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, entry_date),
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+    """)
+    
     # Insert default vice types if not exists
     vice_type_defaults = [
         ("cigarettes", "count", "Cigarettes smoked", "🚬"),
@@ -289,3 +306,45 @@ def get_vice_summary(user_id, entry_date):
     ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+# ============= NUTRIENT DATA FUNCTIONS =============
+
+def save_nutrient_data(user_id, entry_date, protein, carbs, fats, fiber, analysis):
+    """Save or update nutrient breakdown for a date"""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT OR REPLACE INTO nutrient_data 
+               (user_id, entry_date, protein_grams, carbs_grams, fats_grams, fiber_grams, analysis)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, entry_date, protein, carbs, fats, fiber, analysis)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        conn.close()
+        return False
+
+def get_nutrient_data(user_id, entry_date):
+    """Get cached nutrient breakdown for a date"""
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT protein_grams, carbs_grams, fats_grams, fiber_grams, analysis
+           FROM nutrient_data
+           WHERE user_id = ? AND entry_date = ?""",
+        (user_id, entry_date)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def delete_nutrient_data(user_id, entry_date):
+    """Delete cached nutrient data for a date"""
+    conn = get_connection()
+    conn.execute(
+        "DELETE FROM nutrient_data WHERE user_id = ? AND entry_date = ?",
+        (user_id, entry_date)
+    )
+    conn.commit()
+    conn.close()
+

@@ -67,6 +67,8 @@ def add():
         return redirect(url_for("calorie.index", date=entry_date))
 
     database.add_entry(user_id, entry_date, food_item, calories)
+    # Invalidate nutrient cache for this date so it gets recalculated
+    database.delete_nutrient_data(user_id, entry_date)
     flash(f"Added {food_item} ({calories} kcal)", "success")
     return redirect(url_for("calorie.index", date=entry_date))
 
@@ -78,6 +80,8 @@ def delete(entry_id):
     user_id = session["user_id"]
     entry_date = request.form.get("entry_date", date.today().isoformat())
     database.delete_entry(entry_id, user_id)
+    # Invalidate nutrient cache for this date so it gets recalculated
+    database.delete_nutrient_data(user_id, entry_date)
     flash("Entry deleted successfully.", "success")
     return redirect(url_for("calorie.index", date=entry_date))
 
@@ -200,3 +204,140 @@ def suggest_food():
     except Exception as e:
         print(f"Error in suggest_food: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@calorie_bp.route("/nutrient-breakdown", methods=["GET"])
+@login_required
+def nutrient_breakdown():
+    """Get nutrient breakdown - from cache or calculate with AI"""
+    try:
+        user_id = session["user_id"]
+        selected_date = request.args.get("date", date.today().isoformat())
+        entries = database.get_entries_by_date(user_id, selected_date)
+        
+        if not entries:
+            return jsonify({
+                "protein": 0,
+                "carbs": 0,
+                "fats": 0,
+                "fiber": 0,
+                "details": "No entries for this date",
+                "success": True
+            })
+        
+        # Check if nutrient data already exists in database
+        cached_nutrients = database.get_nutrient_data(user_id, selected_date)
+        
+        if cached_nutrients:
+            # Return from database
+            total_cals = sum(e['calories'] for e in entries)
+            protein_cals = cached_nutrients['protein_grams'] * 4
+            carbs_cals = cached_nutrients['carbs_grams'] * 4
+            fats_cals = cached_nutrients['fats_grams'] * 9
+            
+            protein_pct = round((protein_cals / total_cals * 100)) if total_cals > 0 else 0
+            carbs_pct = round((carbs_cals / total_cals * 100)) if total_cals > 0 else 0
+            fats_pct = round((fats_cals / total_cals * 100)) if total_cals > 0 else 0
+            return jsonify({
+                "protein": cached_nutrients['protein_grams'],
+                "protein_pct": protein_pct,
+                "carbs": cached_nutrients['carbs_grams'],
+                "carbs_pct": carbs_pct,
+                "fats": cached_nutrients['fats_grams'],
+                "fats_pct": fats_pct,
+                "fiber": cached_nutrients['fiber_grams'],
+                "total_calories": total_cals,
+                "analysis": cached_nutrients['analysis'],
+                "success": True,
+                "from_cache": True
+            })
+        
+        # No cache found - call OpenAI to analyze nutrients
+        # Prepare food list for nutrient analysis
+        food_list = "\n".join([f"- {e['food_item']} ({e['calories']} kcal)" for e in entries])
+        
+        api_key = Config.OPENAI_API_KEY
+        if not api_key:
+            return jsonify({"error": "OpenAI API key not configured"}), 500
+        
+        client = OpenAI(api_key=api_key)
+        
+        system_prompt = """You are a nutritionist analyzing daily food intake. Based on the food items and calories,
+        estimate the macronutrient breakdown. Respond ONLY with valid JSON (no markdown, no extra text):
+        {
+            "protein_grams": <number>,
+            "carbs_grams": <number>,
+            "fats_grams": <number>,
+            "fiber_grams": <number>,
+            "analysis": "<brief summary>"
+        }"""
+        
+        response = client.chat.completions.create(
+            model=Config.OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": f"Analyze this day's nutrition:\n{food_list}\nTotal: {sum(e['calories'] for e in entries)} kcal"
+                }
+            ],
+            temperature=Config.OPENAI_TEMPERATURE,
+            max_tokens=500
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Clean response if wrapped in markdown code blocks
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        
+        import json
+        result = json.loads(response_text)
+        
+        # Calculate percentages
+        total_cals = sum(e['calories'] for e in entries)
+        protein_cals = result.get('protein_grams', 0) * 4
+        carbs_cals = result.get('carbs_grams', 0) * 4
+        fats_cals = result.get('fats_grams', 0) * 9
+        
+        protein_pct = round((protein_cals / total_cals * 100)) if total_cals > 0 else 0
+        carbs_pct = round((carbs_cals / total_cals * 100)) if total_cals > 0 else 0
+        fats_pct = round((fats_cals / total_cals * 100)) if total_cals > 0 else 0
+        
+        # Save nutrients to database for future use
+        analysis = result.get('analysis', 'Daily nutrition analyzed')
+        database.save_nutrient_data(
+            user_id, 
+            selected_date,
+            result.get('protein_grams', 0),
+            result.get('carbs_grams', 0),
+            result.get('fats_grams', 0),
+            result.get('fiber_grams', 0),
+            analysis
+        )
+        
+        return jsonify({
+            "protein": result.get('protein_grams', 0),
+            "protein_pct": protein_pct,
+            "carbs": result.get('carbs_grams', 0),
+            "carbs_pct": carbs_pct,
+            "fats": result.get('fats_grams', 0),
+            "fats_pct": fats_pct,
+            "fiber": result.get('fiber_grams', 0),
+            "total_calories": total_cals,
+            "analysis": analysis,
+            "success": True,
+            "from_cache": False
+        })
+    
+    except json.JSONDecodeError as e:
+        print(f"JSON parse error: {str(e)}")
+        return jsonify({"error": "Failed to parse nutrition data", "success": False}), 500
+    except Exception as e:
+        print(f"Error in nutrient_breakdown: {str(e)}")
+        return jsonify({"error": str(e), "success": False}), 500

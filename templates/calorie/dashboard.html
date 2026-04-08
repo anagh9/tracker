@@ -145,6 +145,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+
+        <!-- New Entry Button -->
+        {% if selected_date == today %}
+        <button onclick="openNewEntryModal()" class="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-5 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-2">
+          <span>+</span>
+          <span class="hidden sm:inline">New Entry</span>
+          <span class="sm:hidden">Add</span>
+        </button>
+        {% endif %}
         
         <!-- Quick Date Selector -->
         <form method="GET" action="/calorie/" class="flex items-center gap-2 flex-shrink-0">
@@ -186,19 +195,60 @@
 
         <!-- Charts Section -->
         {% if entries %}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <!-- Pie Chart -->
-          <div class="lg:col-span-1 bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+          <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
             <p class="text-sm font-semibold text-stone-700 mb-4">Food Distribution</p>
             <div class="relative h-64 flex items-center justify-center">
               <canvas id="foodChart"></canvas>
             </div>
           </div>
 
-          <!-- Stats Cards -->
-          <div class="lg:col-span-2 grid grid-cols-2 gap-4">
-            <!-- Most Consumed -->
-            <div id="mostConsumedCard" class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
+          <!-- Nutrient Breakdown Chart -->
+          <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <p class="text-sm font-semibold text-stone-700 mb-4">🥗 Nutrient Breakdown</p>
+            <div id="nutrientLoading" class="text-center py-8">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+              <p class="text-xs text-stone-400 mt-2">Analyzing nutrients...</p>
+            </div>
+            <div id="nutrientChartContainer" class="hidden relative h-64 flex items-center justify-center">
+              <canvas id="nutrientChart"></canvas>
+            </div>
+            <div id="nutrientDetails" class="hidden text-xs space-y-2 mt-4 pt-4 border-t border-stone-200">
+              <div class="flex justify-between items-center">
+                <span class="text-stone-600">Protein</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-blue-600" id="proteinGrams">0g</span>
+                  <span class="text-stone-400" id="proteinPct">0%</span>
+                </div>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-stone-600">Carbs</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-green-600" id="carbsGrams">0g</span>
+                  <span class="text-stone-400" id="carbsPct">0%</span>
+                </div>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-stone-600">Fats</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-yellow-600" id="fatsGrams">0g</span>
+                  <span class="text-stone-400" id="fatsPct">0%</span>
+                </div>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-stone-600">Fiber</span>
+                <span class="font-bold text-purple-600" id="fiberGrams">0g</span>
+              </div>
+            </div>
+            <div id="nutrientError" class="hidden text-xs text-red-600 text-center py-4"></div>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <!-- Most Consumed -->
+          <div id="mostConsumedCard" class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
               <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Most Consumed</p>
               <p class="text-lg font-bold text-stone-900" id="mostConsumedItem">-</p>
               <p class="text-xs text-stone-500 mt-1" id="mostConsumedCals">0 kcal</p>
@@ -232,28 +282,7 @@
         </div>
         {% endif %}
 
-        <!-- Add Entry Form -->
-        {% if selected_date == today %}
-        <div class="bg-white border border-stone-200 rounded-xl p-6 mb-6 shadow-sm">
-          <p class="text-xs text-stone-400 uppercase tracking-widest font-semibold mb-4">Add New Entry</p>
-          <form method="POST" action="/calorie/add" class="flex flex-col sm:flex-row gap-3">
-            <input type="hidden" name="entry_date" value="{{ selected_date }}">
-            <input type="text" id="foodItemInput" name="food_item" placeholder="What did you eat?" required
-              class="flex-1 min-w-0 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition">
-            <input type="number" id="caloriesInput" name="calories" placeholder="kcal" required min="1"
-              class="w-full sm:w-28 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
-            <button type="button" onclick="suggestCalories()" title="Get AI calorie suggestion"
-              class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-2">
-              <span>✨</span>
-              <span class="hidden sm:inline">AI</span>
-            </button>
-            <button type="submit"
-              class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap">
-              + Add
-            </button>
-          </form>
-        </div>
-        {% endif %}
+        <!-- Add Entry Modal moved to header button -->
 
         <!-- Entries List -->
         <div class="space-y-2">
@@ -289,6 +318,80 @@
 
       </div>
     </main>
+  </div>
+</div>
+
+<!-- New Entry Modal -->
+<div id="newEntryModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+    
+    <!-- Modal Header -->
+    <div class="bg-gradient-to-r from-orange-400 to-orange-500 px-6 py-5 flex items-center justify-between border-b border-orange-600">
+      <h2 class="text-xl font-bold text-white">➕ New Calorie Entry</h2>
+      <button onclick="closeNewEntryModal()" class="text-white hover:bg-orange-600 p-1 rounded-lg transition">
+        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Content -->
+    <div class="p-6 space-y-4">
+      <form id="newEntryForm" method="POST" action="/calorie/add" class="space-y-4">
+        <input type="hidden" id="modalEntryDate" name="entry_date" value="{{ selected_date }}">
+        
+        <!-- Food Item Input -->
+        <div>
+          <label class="block text-sm font-semibold text-stone-700 mb-2">What did you eat?</label>
+          <div class="flex gap-2">
+            <input 
+              type="text" 
+              id="modalFoodItemInput" 
+              name="food_item" 
+              placeholder="e.g., Grilled chicken, apple, pasta..." 
+              required
+              class="flex-1 border border-stone-200 rounded-lg px-4 py-3 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition">
+            <button 
+              type="button" 
+              onclick="suggestCaloriesFromModal()" 
+              title="Get AI calorie suggestion"
+              class="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-4 py-3 rounded-lg transition shadow-sm hover:shadow-md flex items-center gap-2 whitespace-nowrap">
+              <span>✨</span>
+              <span class="hidden sm:inline">AI</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Calories Input -->
+        <div>
+          <label class="block text-sm font-semibold text-stone-700 mb-2">Calories (kcal)</label>
+          <input 
+            type="number" 
+            id="modalCaloriesInput" 
+            name="calories" 
+            placeholder="e.g., 350" 
+            required 
+            min="1"
+            class="w-full border border-stone-200 rounded-lg px-4 py-3 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
+          <p class="text-xs text-stone-500 mt-1">Use the AI button for estimates</p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 pt-4">
+          <button 
+            type="button"
+            onclick="closeNewEntryModal()"
+            class="flex-1 border border-stone-200 hover:border-stone-300 hover:bg-stone-50 text-stone-700 font-semibold py-3 px-4 rounded-lg transition">
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-lg transition shadow-sm hover:shadow-md">
+            Add Entry
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -616,8 +719,115 @@
     document.getElementById('mostConsumedCals').textContent = data[maxIndex] + ' kcal';
   }
 
+  // Nutrient Breakdown Chart
+  function initializeNutrientBreakdown() {
+    const selectedDate = '{{ selected_date }}';
+    
+    fetch(`/calorie/nutrient-breakdown?date=${selectedDate}`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          document.getElementById('nutrientLoading').classList.add('hidden');
+          document.getElementById('nutrientError').classList.remove('hidden');
+          document.getElementById('nutrientError').textContent = data.error || 'Failed to load nutrients';
+          return;
+        }
+
+        // Update nutrient values
+        document.getElementById('proteinGrams').textContent = Math.round(data.protein) + 'g';
+        document.getElementById('proteinPct').textContent = data.protein_pct + '%';
+        document.getElementById('carbsGrams').textContent = Math.round(data.carbs) + 'g';
+        document.getElementById('carbsPct').textContent = data.carbs_pct + '%';
+        document.getElementById('fatsGrams').textContent = Math.round(data.fats) + 'g';
+        document.getElementById('fatsPct').textContent = data.fats_pct + '%';
+        document.getElementById('fiberGrams').textContent = Math.round(data.fiber) + 'g';
+
+        // Create nutrient bar chart
+        const ctx = document.getElementById('nutrientChart');
+        if (window.nutrientChart && typeof window.nutrientChart.destroy === 'function') {
+          try {
+            window.nutrientChart.destroy();
+          } catch (e) {
+            console.warn('Could not destroy previous chart:', e);
+          }
+        }
+
+        window.nutrientChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Protein', 'Carbs', 'Fats', 'Fiber'],
+            datasets: [{
+              label: 'Grams',
+              data: [
+                Math.round(data.protein),
+                Math.round(data.carbs),
+                Math.round(data.fats),
+                Math.round(data.fiber)
+              ],
+              backgroundColor: [
+                'rgb(59, 130, 246)',  // blue
+                'rgb(34, 197, 94)',   // green
+                'rgb(234, 179, 8)',   // yellow
+                'rgb(168, 85, 247)'   // purple
+              ],
+              borderRadius: 6,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: {
+                  drawBorder: false,
+                  color: 'rgb(229, 231, 235)'
+                },
+                ticks: {
+                  font: {
+                    size: 11
+                  }
+                }
+              },
+              y: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  font: {
+                    size: 11
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        // Show chart and details
+        document.getElementById('nutrientLoading').classList.add('hidden');
+        document.getElementById('nutrientChartContainer').classList.remove('hidden');
+        document.getElementById('nutrientDetails').classList.remove('hidden');
+      })
+      .catch(error => {
+        console.error('Error loading nutrients:', error);
+        document.getElementById('nutrientLoading').classList.add('hidden');
+        document.getElementById('nutrientError').classList.remove('hidden');
+        document.getElementById('nutrientError').textContent = 'Unable to analyze nutrients';
+      });
+  }
+
   // Run on page load
-  document.addEventListener('DOMContentLoaded', initializeFoodChart);
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeFoodChart();
+    initializeNutrientBreakdown();
+  });
 
   // Calculator Modal Functions
   function openCalculatorModal() {
@@ -775,8 +985,8 @@
     openSuggestionModal();
     showSuggestionLoading();
 
-    // Call the Flask backend
-    fetch('/suggest-food', {
+    // Call the Flask backend - correct blueprint endpoint
+    fetch('/calorie/suggest-food', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -832,6 +1042,89 @@
     document.getElementById('caloriesInput').value = calories;
     closeSuggestionModal();
   }
+
+  // New Entry Modal Functions
+  function openNewEntryModal() {
+    document.getElementById('newEntryModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    // Focus on food input
+    setTimeout(() => {
+      document.getElementById('modalFoodItemInput').focus();
+    }, 100);
+    // Update the date field
+    document.getElementById('modalEntryDate').value = '{{ selected_date }}';
+  }
+
+  function closeNewEntryModal() {
+    document.getElementById('newEntryModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    // Reset form
+    document.getElementById('newEntryForm').reset();
+  }
+
+  function suggestCaloriesFromModal() {
+    const foodInput = document.getElementById('modalFoodItemInput').value.trim();
+    
+    if (!foodInput) {
+      alert('Please enter a food item first');
+      return;
+    }
+
+    openSuggestionModal();
+    showSuggestionLoading();
+
+    // Call the Flask backend - correct blueprint endpoint
+    fetch('/calorie/suggest-food', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        food_input: foodInput
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        showSuggestionError(data.error);
+      } else {
+        // Populate modal fields directly without showing suggestion modal
+        document.getElementById('modalFoodItemInput').value = data.food;
+        document.getElementById('modalCaloriesInput').value = data.calories;
+        
+        // Close suggestion modal and return focus to new entry modal
+        closeSuggestionModal();
+        document.getElementById('modalCaloriesInput').focus();
+      }
+    })
+    .catch(error => {
+      showSuggestionError('Failed to get suggestion: ' + error.message);
+    });
+  }
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('newEntryModal').classList.contains('hidden')) {
+      closeNewEntryModal();
+    }
+  });
+
+  // Handle form submission in modal
+  document.getElementById('newEntryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const foodItem = formData.get('food_item').trim();
+    const calories = formData.get('calories').trim();
+    
+    if (!foodItem || !calories) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    // Submit the form
+    this.submit();
+  });
 </script>
 
 {% endblock %}
