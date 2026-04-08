@@ -1,837 +1,95 @@
 {% extends "base.html" %}
 {% block content %}
-
-<div id="dashContainer" class="flex h-screen bg-stone-50 overflow-hidden">
-
-  <!-- Sidebar Overlay (Mobile) -->
-  <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="closeSidebar()"></div>
-
-  <!-- LEFT SIDEBAR NAVIGATION -->
-  <aside id="sidebar" class="w-64 bg-white border-r border-stone-200 shadow-sm flex flex-col fixed lg:static lg:w-64 h-full -left-64 lg:left-0 transition-all duration-300 z-40">
-    
-    <!-- Close Button (Mobile) -->
-    <button onclick="closeSidebar()" class="absolute top-4 right-4 lg:hidden p-2 hover:bg-stone-100 rounded-lg transition">
-      <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-
-    <!-- Logo Section -->
-    <div class="px-6 py-6 border-b border-stone-200">
+<div class="min-h-screen bg-gradient-to-br from-stone-50 to-stone-100">
+  <!-- Navigation Bar -->
+  <nav class="bg-white border-b border-stone-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="text-2xl">🔥</span>
         <span class="mono text-lg font-bold text-stone-900">
           cal<span class="text-orange-500">track</span>
         </span>
       </div>
-      <p class="text-xs text-stone-400 mt-1">calorie journal</p>
+      <div class="flex items-center gap-4">
+        <span class="text-sm text-stone-600">{{ username }}</span>
+        <a href="/auth/logout" class="text-sm text-red-600 hover:text-red-700 font-medium">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 py-12">
+    <!-- Welcome Section -->
+    <div class="text-center mb-12">
+      <h1 class="text-5xl font-bold text-stone-900 mb-3">Welcome Back, {{ username }}!</h1>
+      <p class="text-xl text-stone-600">Choose a tracker to view and manage your data</p>
     </div>
 
-    <!-- Navigation Items -->
-    <nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
-      
-      <!-- Dashboard -->
-      <a href="/" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
-                         bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200">
-        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 13l4-8m4 8V5m0 0H7m0 0L3 9" />
-        </svg>
-        <span class="font-medium text-sm">Dashboard</span>
+    <!-- Tracker Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <!-- Calorie Tracker Card -->
+      <a href="/calorie/" class="group">
+        <div class="bg-white rounded-2xl border-2 border-orange-200 hover:border-orange-400 hover:shadow-2xl transition p-8 h-full">
+          <div class="text-6xl mb-4">🔥</div>
+          <h2 class="text-3xl font-bold text-stone-900 mb-2">Calorie Tracker</h2>
+          <p class="text-stone-600 mb-6">Track your daily calorie intake, get AI-powered food suggestions, and visualize your nutrition.</p>
+          <div class="flex items-center text-orange-600 font-semibold group-hover:gap-2 transition-all">
+            <span>Get Started</span>
+            <span class="text-xl">→</span>
+          </div>
+        </div>
       </a>
 
-      <!-- History -->
-      <button onclick="toggleHistoryNav()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
-                                                  text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span class="font-medium text-sm">History</span>
-        <svg id="historyIcon" class="w-4 h-4 ml-auto flex-shrink-0 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-
-      <!-- History Submenu -->
-      <div id="historyMenu" class="hidden pl-4 space-y-1 max-h-48 overflow-y-auto">
-        {% for d in all_dates %}
-        <a href="/?date={{ d }}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm
-                                        {% if d == selected_date %}bg-orange-50 text-orange-600 border-l-2 border-orange-500 font-medium{% else %}text-stone-600 hover:bg-stone-100{% endif %}">
-          {% if d == today %}
-            <span>📌</span>
-            <span class="mono font-medium">Today</span>
-          {% else %}
-            <span>📄</span>
-            <span class="mono truncate">{{ d }}</span>
-          {% endif %}
-        </a>
-        {% endfor %}
-      </div>
-
-      <!-- Calculator -->
-      <button onclick="openCalculatorModal()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
-                                                    text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-        <span class="font-medium text-sm">Calculator</span>
-        <span class="ml-auto text-lg flex-shrink-0">🧮</span>
-      </button>
-
-      <!-- Export -->
-      <a href="/export" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
-                              text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
-        </svg>
-        <span class="font-medium text-sm">Export</span>
-      </a>
-
-    </nav>
-
-    <!-- Footer Section - User Info -->
-    <div class="px-3 py-6 border-t border-stone-200 space-y-3">
-      
-      <!-- User Card -->
-      <div class="bg-stone-50 rounded-lg p-3 border border-stone-200">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 
-                      flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-            {{ username[0:2].upper() }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-stone-900 truncate">{{ username }}</p>
-            <p class="text-xs text-stone-500">User</p>
+      <!-- Vices Tracker Card -->
+      <a href="/vices/" class="group">
+        <div class="bg-white rounded-2xl border-2 border-purple-200 hover:border-purple-400 hover:shadow-2xl transition p-8 h-full">
+          <div class="text-6xl mb-4">⚠️</div>
+          <h2 class="text-3xl font-bold text-stone-900 mb-2">Vices Tracker</h2>
+          <p class="text-stone-600 mb-6">Monitor your habits like smoking, alcohol, and caffeine consumption with daily tracking and analytics.</p>
+          <div class="flex items-center text-purple-600 font-semibold group-hover:gap-2 transition-all">
+            <span>Get Started</span>
+            <span class="text-xl">→</span>
           </div>
         </div>
-      </div>
-
-      <!-- Change Password Button -->
-      <button onclick="openPasswordModal()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
-                              bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-medium text-sm justify-center">
-        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        Change Password
-      </button>
-
-      <!-- Logout Button -->
-      <a href="/logout" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
-                              bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-medium text-sm justify-center">
-        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-        Logout
       </a>
     </div>
-  </aside>
 
-  <!-- MAIN CONTENT AREA -->
-  <div class="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
-    
-    <!-- TOP HEADER -->
-    <header class="bg-white border-b border-stone-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 shadow-sm">
-      <div class="flex items-center justify-between gap-4">
-        <!-- Left side: Title -->
-        <div class="min-w-0 flex-1">
-          <h1 class="text-xl sm:text-2xl font-bold text-stone-900 truncate">
-            {% if selected_date == today %}Today's Tracking{% else %}{{ selected_date }}{% endif %}
-          </h1>
-          <p class="text-xs sm:text-sm text-stone-500 mt-1 mono">{{ selected_date }}</p>
+    <!-- Features Section -->
+    <div class="mt-16 pt-12 border-t border-stone-200">
+      <h3 class="text-2xl font-bold text-stone-900 mb-8 text-center">Features</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div class="p-4">
+          <p class="text-2xl mb-2">📊</p>
+          <h4 class="font-semibold text-stone-900 mb-1">Real-time Tracking</h4>
+          <p class="text-sm text-stone-600">Log and track data instantly throughout your day</p>
         </div>
-
-        <!-- Mobile Menu Button -->
-        <button onclick="openSidebar()" class="lg:hidden flex-shrink-0 p-2 hover:bg-stone-100 rounded-lg transition">
-          <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        
-        <!-- Quick Date Selector -->
-        <form method="GET" action="/" class="flex items-center gap-2 flex-shrink-0">
-          <input type="date" name="date" value="{{ selected_date }}"
-            class="border border-stone-200 rounded-lg px-2 sm:px-4 py-2 text-xs sm:text-sm bg-stone-50 
-                   focus:outline-none focus:ring-2 focus:ring-orange-400 
-                   focus:bg-white transition">
-          <button type="submit"
-            class="bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium 
-                   px-2 sm:px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md flex-shrink-0">
-            Go
-          </button>
-        </form>
-      </div>
-    </header>
-
-    <!-- SCROLLABLE CONTENT -->
-    <main class="flex-1 overflow-y-auto">
-      <div class="p-4 sm:p-6 lg:p-8 max-w-6xl">
-
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% for cat, msg in messages %}
-            <div class="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{{ msg }}</div>
-          {% endfor %}
-        {% endwith %}
-
-        <!-- Calorie Summary Card -->
-        <div class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6 shadow-sm">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Daily Total</p>
-              <p class="mono text-4xl sm:text-5xl font-bold text-orange-600">{{ total }}</p>
-              <p class="text-sm text-stone-600 mt-1">kcal consumed</p>
-            </div>
-            <div class="text-6xl sm:text-7xl opacity-20">🔥</div>
-          </div>
+        <div class="p-4">
+          <p class="text-2xl mb-2">✨</p>
+          <h4 class="font-semibold text-stone-900 mb-1">AI Assistance</h4>
+          <p class="text-sm text-stone-600">Get intelligent suggestions and estimates powered by OpenAI</p>
         </div>
-
-        <!-- Charts Section -->
-        {% if entries %}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <!-- Pie Chart -->
-          <div class="lg:col-span-1 bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
-            <p class="text-sm font-semibold text-stone-700 mb-4">Food Distribution</p>
-            <div class="relative h-64 flex items-center justify-center">
-              <canvas id="foodChart"></canvas>
-            </div>
-          </div>
-
-          <!-- Stats Cards -->
-          <div class="lg:col-span-2 grid grid-cols-2 gap-4">
-            <!-- Most Consumed -->
-            <div id="mostConsumedCard" class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Most Consumed</p>
-              <p class="text-lg font-bold text-stone-900" id="mostConsumedItem">-</p>
-              <p class="text-xs text-stone-500 mt-1" id="mostConsumedCals">0 kcal</p>
-            </div>
-
-            <!-- Items Count -->
-            <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Items Logged</p>
-              <p class="text-lg font-bold text-stone-900">{{ entries|length }}</p>
-              <p class="text-xs text-stone-500 mt-1">food items</p>
-            </div>
-
-            <!-- Average per Item -->
-            <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Average/Item</p>
-              <p class="text-lg font-bold text-stone-900" id="avgPerItem">
-                {% if entries %}{{ (total / entries|length)|int }}{% else %}0{% endif %}
-              </p>
-              <p class="text-xs text-stone-500 mt-1">kcal per item</p>
-            </div>
-
-            <!-- Remaining (Placeholder) -->
-            <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Progress</p>
-              <div class="w-full bg-stone-200 rounded-full h-2 mt-2">
-                <div class="bg-orange-500 h-2 rounded-full" style="width: {% if total > 2500 %}100{% else %}{{ (total / 2500 * 100)|int }}{% endif %}%"></div>
-              </div>
-              <p class="text-xs text-stone-500 mt-2" id="progressText">{{ total }} / 2500 kcal</p>
-            </div>
-          </div>
+        <div class="p-4">
+          <p class="text-2xl mb-2">📈</p>
+          <h4 class="font-semibold text-stone-900 mb-1">Analytics</h4>
+          <p class="text-sm text-stone-600">Visualize your progress with charts and statistics</p>
         </div>
-        {% endif %}
-
-        <!-- Add Entry Form -->
-        {% if selected_date == today %}
-        <div class="bg-white border border-stone-200 rounded-xl p-6 mb-6 shadow-sm">
-          <p class="text-xs text-stone-400 uppercase tracking-widest font-semibold mb-4">Add New Entry</p>
-          <form method="POST" action="/add" class="flex flex-col sm:flex-row gap-3">
-            <input type="hidden" name="entry_date" value="{{ selected_date }}">
-            <input type="text" id="foodItemInput" name="food_item" placeholder="What did you eat?" required
-              class="flex-1 min-w-0 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition">
-            <input type="number" id="caloriesInput" name="calories" placeholder="kcal" required min="1"
-              class="w-full sm:w-28 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
-            <button type="button" onclick="suggestCalories()" title="Get AI calorie suggestion"
-              class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-2">
-              <span>✨</span>
-              <span class="hidden sm:inline">AI</span>
-            </button>
-            <button type="submit"
-              class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap">
-              + Add
-            </button>
-          </form>
+        <div class="p-4">
+          <p class="text-2xl mb-2">📅</p>
+          <h4 class="font-semibold text-stone-900 mb-1">History</h4>
+          <p class="text-sm text-stone-600">Access your full tracking history anytime</p>
         </div>
-        {% endif %}
-
-        <!-- Entries List -->
-        <div class="space-y-2">
-          {% if entries %}
-            {% for entry in entries %}
-            <div class="bg-white border border-stone-200 rounded-lg px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:shadow-md transition-all duration-200">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-stone-800 truncate">{{ entry["food_item"] }}</p>
-                <p class="mono text-xs text-stone-400 mt-1">{{ entry["created_at"][:16] }}</p>
-              </div>
-              <div class="flex items-center gap-4 flex-shrink-0">
-                <span class="mono text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg whitespace-nowrap">{{ entry["calories"] }} kcal</span>
-                {% if selected_date == today %}
-                <form method="POST" action="/delete/{{ entry['id'] }}">
-                  <input type="hidden" name="entry_date" value="{{ selected_date }}">
-                  <button type="submit" title="Delete entry"
-                    class="text-stone-300 hover:text-red-500 transition text-sm opacity-0 group-hover:opacity-100 font-bold">
-                    ✕
-                  </button>
-                </form>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-8 sm:p-12 text-center">
-              <p class="text-4xl sm:text-5xl mb-3">🍽️</p>
-              <p class="text-stone-500 font-medium">No entries yet for this day</p>
-              <p class="text-xs text-stone-400 mt-2">Start tracking by adding your first meal</p>
-            </div>
-          {% endif %}
+        <div class="p-4">
+          <p class="text-2xl mb-2">📥</p>
+          <h4 class="font-semibold text-stone-900 mb-1">Export</h4>
+          <p class="text-sm text-stone-600">Export your data to Excel for further analysis</p>
         </div>
-
-      </div>
-    </main>
-  </div>
-</div>
-
-<!-- Calorie Calculator Modal -->
-<div id="calculatorModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-    
-    <!-- Modal Header -->
-    <div class="sticky top-0 bg-gradient-to-r from-orange-400 to-orange-500 px-6 py-5 flex items-center justify-between border-b border-orange-600">
-      <h2 class="text-xl font-bold text-white">🧮 Calorie Calculator</h2>
-      <button onclick="closeCalculatorModal()" class="text-white hover:bg-orange-600 p-1 rounded-lg transition">
-        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Modal Body -->
-    <div class="p-6 space-y-4">
-      <p class="text-sm text-stone-600 mb-6">Calculate your daily calorie needs based on personal information</p>
-
-      <!-- Gender Selection -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Gender</label>
-        <div class="flex gap-3">
-          <label class="flex items-center cursor-pointer">
-            <input type="radio" name="gender" value="male" checked class="w-4 h-4 text-orange-500">
-            <span class="ml-2 text-sm text-stone-700">Male</span>
-          </label>
-          <label class="flex items-center cursor-pointer">
-            <input type="radio" name="gender" value="female" class="w-4 h-4 text-orange-500">
-            <span class="ml-2 text-sm text-stone-700">Female</span>
-          </label>
+        <div class="p-4">
+          <p class="text-2xl mb-2">🔐</p>
+          <h4 class="font-semibold text-stone-900 mb-1">Secure</h4>
+          <p class="text-sm text-stone-600">Your data is private and securely stored</p>
         </div>
-      </div>
-
-      <!-- Age -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Age (years)</label>
-        <input type="number" id="age" min="10" max="120" placeholder="25" 
-          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-      </div>
-
-      <!-- Height -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Height (cm)</label>
-        <input type="number" id="height" min="100" max="250" placeholder="175" 
-          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-      </div>
-
-      <!-- Weight -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Weight (kg)</label>
-        <input type="number" id="weight" min="30" max="200" step="0.1" placeholder="75" 
-          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-      </div>
-
-      <!-- Activity Level -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Activity Level</label>
-        <select id="activity" class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-          <option value="1.2">Sedentary (little or no exercise)</option>
-          <option value="1.375" selected>Lightly active (1-3 days/week)</option>
-          <option value="1.55">Moderately active (3-5 days/week)</option>
-          <option value="1.725">Very active (6-7 days/week)</option>
-          <option value="1.9">Extremely active (physical job + training)</option>
-        </select>
-      </div>
-
-      <!-- Result -->
-      <div id="resultContainer" class="hidden mt-6 p-4 bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl">
-        <p class="text-xs uppercase tracking-widest text-orange-600 font-semibold mb-2">Your Daily Need</p>
-        <div class="flex items-baseline gap-2">
-          <span class="mono text-4xl font-bold text-orange-600" id="dailyCalories">2400</span>
-          <span class="text-stone-600 text-sm">kcal/day</span>
-        </div>
-        <p class="text-xs text-stone-600 mt-3" id="resultDetails"></p>
-      </div>
-
-      <!-- Buttons -->
-      <div class="flex gap-3 pt-4">
-        <button onclick="calculateCalories()" 
-          class="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 
-                   text-white font-semibold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md">
-          Calculate
-        </button>
-        <button onclick="closeCalculatorModal()" 
-          class="flex-1 border border-stone-200 hover:border-stone-300 hover:bg-stone-50 
-                   text-stone-700 font-semibold py-3 px-4 rounded-xl transition">
-          Close
-        </button>
       </div>
     </div>
   </div>
 </div>
-
-<!-- Change Password Modal -->
-<div id="passwordModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-    
-    <!-- Modal Header -->
-    <div class="bg-gradient-to-r from-blue-400 to-blue-500 px-6 py-5 flex items-center justify-between border-b border-blue-600">
-      <h2 class="text-xl font-bold text-white">🔐 Change Password</h2>
-      <button onclick="closePasswordModal()" class="text-white hover:bg-blue-600 p-1 rounded-lg transition">
-        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Modal Body -->
-    <form id="passwordForm" method="POST" action="/change-password" class="p-6 space-y-4">
-      
-      {% if not is_oauth_user %}
-      <!-- Current Password - Only for non-OAuth users -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Current Password</label>
-        <input type="password" name="current_password" id="currentPassword"
-          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-          placeholder="Enter current password">
-      </div>
-      {% else %}
-      <!-- Info for OAuth Users -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <p class="text-xs text-blue-700"><strong>ℹ️ Google Sign-In:</strong> You can set a password now for additional security.</p>
-      </div>
-      {% endif %}
-
-      <!-- New Password -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">New Password</label>
-        <input type="password" name="new_password" id="newPassword" required
-          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-          placeholder="Enter new password">
-        <p class="text-xs text-stone-500 mt-1">At least 6 characters</p>
-      </div>
-
-      <!-- Confirm Password -->
-      <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Confirm Password</label>
-        <input type="password" name="confirm_password" id="confirmPassword" required
-          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-          placeholder="Confirm new password">
-      </div>
-
-      <!-- Flash Messages -->
-      <div id="passwordMessage" class="hidden px-4 py-3 rounded-lg text-sm font-medium"></div>
-
-      <!-- Buttons -->
-      <div class="flex gap-3 pt-4">
-        <button type="submit"
-          class="flex-1 bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 
-                   text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-sm hover:shadow-md">
-          Update Password
-        </button>
-        <button type="button" onclick="closePasswordModal()" 
-          class="flex-1 border border-stone-200 hover:border-stone-300 hover:bg-stone-50 
-                   text-stone-700 font-semibold py-2.5 px-4 rounded-xl transition">
-          Cancel
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- AI Food Suggestion Modal -->
-<div id="suggestionModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-    
-    <!-- Modal Header -->
-    <div class="bg-gradient-to-r from-purple-400 to-purple-500 px-6 py-5 flex items-center justify-between border-b border-purple-600">
-      <h2 class="text-xl font-bold text-white">✨ AI Food Suggestion</h2>
-      <button onclick="closeSuggestionModal()" class="text-white hover:bg-purple-600 p-1 rounded-lg transition">
-        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Modal Body -->
-    <div class="p-6 space-y-4">
-      <!-- Loading State -->
-      <div id="suggestionLoading" class="hidden text-center py-6">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-        <p class="text-stone-600 text-sm mt-3">Getting AI suggestion...</p>
-      </div>
-
-      <!-- Result State -->
-      <div id="suggestionResult" class="hidden space-y-4">
-        <div class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 rounded-xl p-4">
-          <p class="text-xs uppercase tracking-widest text-purple-600 font-semibold mb-2">Suggested Food</p>
-          <p class="text-lg font-bold text-stone-800" id="suggestedFood">Loading...</p>
-          <p class="text-xs text-stone-600 mt-2" id="suggestedResponse"></p>
-        </div>
-        
-        <div class="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
-          <p class="text-xs uppercase tracking-widest text-orange-600 font-semibold mb-2">Estimated Calories</p>
-          <div class="flex items-baseline gap-2">
-            <span class="mono text-3xl font-bold text-orange-600" id="suggestedCalories">0</span>
-            <span class="text-stone-600 text-sm">kcal</span>
-          </div>
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button onclick="addSuggestedFood()" 
-            class="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 
-                     text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-sm hover:shadow-md">
-            + Add Entry
-          </button>
-          <button onclick="closeSuggestionModal()" 
-            class="flex-1 border border-stone-200 hover:border-stone-300 hover:bg-stone-50 
-                     text-stone-700 font-semibold py-2.5 px-4 rounded-xl transition">
-            Close
-          </button>
-        </div>
-      </div>
-
-      <!-- Error State -->
-      <div id="suggestionError" class="hidden space-y-4">
-        <div class="bg-red-50 border-2 border-red-300 rounded-xl p-4">
-          <p class="text-sm font-semibold text-red-700 mb-2">❌ Suggestion Failed</p>
-          <p class="text-sm text-red-600" id="errorMessage"></p>
-        </div>
-        <button onclick="closeSuggestionModal()" 
-          class="w-full border border-stone-200 hover:border-stone-300 hover:bg-stone-50 
-                   text-stone-700 font-semibold py-2.5 px-4 rounded-xl transition">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- JavaScript -->
-<script>
-  // Sidebar Toggle
-  function openSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.add('left-0');
-    sidebar.classList.remove('-left-64');
-    overlay.classList.remove('hidden');
-  }
-
-  function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.remove('left-0');
-    sidebar.classList.add('-left-64');
-    overlay.classList.add('hidden');
-  }
-
-  // History Navigation Toggle
-  function toggleHistoryNav() {
-    const menu = document.getElementById('historyMenu');
-    const icon = document.getElementById('historyIcon');
-    menu.classList.toggle('hidden');
-    icon.classList.toggle('rotate-90');
-  }
-
-  // Initialize Pie Chart
-  function initializeFoodChart() {
-    const chartCanvas = document.getElementById('foodChart');
-    if (!chartCanvas) return;
-
-    const entries = {{ entries|tojson }};
-    
-    if (entries.length === 0) return;
-
-    // Prepare data
-    const labels = entries.map(e => e.food_item);
-    const data = entries.map(e => e.calories);
-    
-    // Color palette
-    const colors = [
-      '#f97316', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa',
-      '#f472b6', '#fb923c', '#fcd34d', '#4ade80', '#22d3ee',
-      '#3b82f6', '#d946ef', '#ec4899', '#f59e0b', '#8b5cf6'
-    ];
-
-    new Chart(chartCanvas, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: colors.slice(0, data.length),
-          borderColor: '#ffffff',
-          borderWidth: 2,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              font: { size: 12 },
-              padding: 15,
-              usePointStyle: true,
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const label = context.label || '';
-                const value = context.parsed || 0;
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1);
-                return label + ': ' + value + ' kcal (' + percentage + '%)';
-              }
-            }
-          }
-        },
-        layout: {
-          padding: 0
-        }
-      }
-    });
-
-    // Find most consumed item
-    const maxIndex = data.indexOf(Math.max(...data));
-    document.getElementById('mostConsumedItem').textContent = labels[maxIndex];
-    document.getElementById('mostConsumedCals').textContent = data[maxIndex] + ' kcal';
-  }
-
-  // Run on page load
-  document.addEventListener('DOMContentLoaded', initializeFoodChart);
-
-  // Calculator Modal Functions
-  function openCalculatorModal() {
-    document.getElementById('calculatorModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeCalculatorModal() {
-    document.getElementById('calculatorModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
-  }
-
-  // Calculate Daily Calories
-  function calculateCalories() {
-    const age = parseFloat(document.getElementById('age').value);
-    const height = parseFloat(document.getElementById('height').value);
-    const weight = parseFloat(document.getElementById('weight').value);
-    const activity = parseFloat(document.getElementById('activity').value);
-    const gender = document.querySelector('input[name="gender"]:checked').value;
-
-    if (!age || !height || !weight) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    let bmr;
-    if (gender === 'male') {
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
-    } else {
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
-    }
-
-    const tdee = Math.round(bmr * activity);
-    
-    const resultContainer = document.getElementById('resultContainer');
-    document.getElementById('dailyCalories').textContent = tdee.toLocaleString();
-    
-    const details = `<strong>Breakdown:</strong><br>
-      Base Metabolic Rate (BMR): ${Math.round(bmr)} kcal<br>
-      Activity Level: ${(activity * 100 - 100).toFixed(0)}% above BMR<br><br>
-      <strong>Recommendation:</strong><br>
-      • To maintain: ${tdee} kcal/day<br>
-      • To lose weight: ${Math.round(tdee * 0.85)} kcal/day<br>
-      • To gain weight: ${Math.round(tdee * 1.15)} kcal/day`;
-    
-    document.getElementById('resultDetails').innerHTML = details;
-    resultContainer.classList.remove('hidden');
-  }
-
-  // Keyboard shortcuts
-  document.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
-      calculateCalories();
-    }
-  });
-
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
-      closeCalculatorModal();
-    }
-  });
-
-  // Password Modal Functions
-  const isOAuthUser = {{ 'true' if is_oauth_user else 'false' }};
-  
-  function openPasswordModal() {
-    document.getElementById('passwordModal').classList.remove('hidden');
-    document.getElementById('passwordForm').reset();
-    document.getElementById('passwordMessage').classList.add('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closePasswordModal() {
-    document.getElementById('passwordModal').classList.add('hidden');
-    document.getElementById('passwordForm').reset();
-    document.getElementById('passwordMessage').classList.add('hidden');
-    document.body.style.overflow = 'auto';
-  }
-
-  // Password Form Submission
-  document.getElementById('passwordForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const currentPassword = document.getElementById('currentPassword') ? document.getElementById('currentPassword').value : '';
-    const newPassword = document.querySelector('input[name="new_password"]').value;
-    const confirmPassword = document.querySelector('input[name="confirm_password"]').value;
-    
-    // Validation
-    if (newPassword.length < 6) {
-      showPasswordMessage('New password must be at least 6 characters', 'error');
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      showPasswordMessage('Passwords do not match', 'error');
-      return;
-    }
-    
-    // For non-OAuth users, require current password
-    if (!isOAuthUser && currentPassword.length === 0) {
-      showPasswordMessage('Please enter your current password', 'error');
-      return;
-    }
-    
-    // Submit form
-    this.submit();
-  });
-
-  function showPasswordMessage(message, type) {
-    const messageDiv = document.getElementById('passwordMessage');
-    messageDiv.textContent = message;
-    messageDiv.classList.remove('hidden');
-    
-    if (type === 'error') {
-      messageDiv.className = 'hidden px-4 py-3 rounded-lg text-sm font-medium';
-      messageDiv.classList.remove('hidden');
-      messageDiv.classList.add('bg-red-50', 'text-red-600', 'border', 'border-red-200');
-    } else {
-      messageDiv.className = 'hidden px-4 py-3 rounded-lg text-sm font-medium';
-      messageDiv.classList.remove('hidden');
-      messageDiv.classList.add('bg-green-50', 'text-green-600', 'border', 'border-green-200');
-    }
-  }
-
-  // Close modal on Escape
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && !document.getElementById('passwordModal').classList.contains('hidden')) {
-      closePasswordModal();
-    }
-  });
-
-  // Suggestion Modal Functions
-  function openSuggestionModal() {
-    document.getElementById('suggestionModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeSuggestionModal() {
-    document.getElementById('suggestionModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
-    // Reset modal states
-    document.getElementById('suggestionLoading').classList.add('hidden');
-    document.getElementById('suggestionResult').classList.add('hidden');
-    document.getElementById('suggestionError').classList.add('hidden');
-  }
-
-  function suggestCalories() {
-    const foodInput = document.getElementById('foodItemInput').value.trim();
-    
-    if (!foodInput) {
-      alert('Please enter a food item first');
-      return;
-    }
-
-    openSuggestionModal();
-    showSuggestionLoading();
-
-    // Call the Flask backend
-    fetch('/suggest-food', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        food_input: foodInput
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        showSuggestionError(data.error);
-      } else {
-        showSuggestionResult(data.food, data.calories, data.suggestion);
-      }
-    })
-    .catch(error => {
-      showSuggestionError('Failed to get suggestion: ' + error.message);
-    });
-  }
-
-  function showSuggestionLoading() {
-    document.getElementById('suggestionLoading').classList.remove('hidden');
-    document.getElementById('suggestionResult').classList.add('hidden');
-    document.getElementById('suggestionError').classList.add('hidden');
-  }
-
-  function showSuggestionResult(food, calories, suggestion) {
-    document.getElementById('suggestionLoading').classList.add('hidden');
-    document.getElementById('suggestionError').classList.add('hidden');
-    
-    document.getElementById('suggestedFood').textContent = food;
-    document.getElementById('suggestedCalories').textContent = calories;
-    document.getElementById('suggestedResponse').textContent = suggestion;
-    
-    document.getElementById('suggestionResult').classList.remove('hidden');
-  }
-
-  function showSuggestionError(errorMessage) {
-    document.getElementById('suggestionLoading').classList.add('hidden');
-    document.getElementById('suggestionResult').classList.add('hidden');
-    
-    document.getElementById('errorMessage').textContent = errorMessage;
-    document.getElementById('suggestionError').classList.remove('hidden');
-  }
-
-  function addSuggestedFood() {
-    const food = document.getElementById('suggestedFood').textContent;
-    const calories = document.getElementById('suggestedCalories').textContent;
-    
-    // Populate the form and close modal
-    document.getElementById('foodItemInput').value = food;
-    document.getElementById('caloriesInput').value = calories;
-    closeSuggestionModal();
-  }
-</script>
-
 {% endblock %}

@@ -1,0 +1,107 @@
+"""
+Vices Tracker Routes Blueprint
+"""
+
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
+from datetime import date
+from pytz import timezone
+import database
+from utils import login_required, get_timezone, get_today_iso
+from config import Config
+
+vices_bp = Blueprint('vices', __name__)
+
+@vices_bp.route("/", methods=["GET"])
+@login_required
+def index():
+    """Vices tracker dashboard"""
+    user_id = session["user_id"]
+    user = database.get_user_by_id(user_id)
+    tz = get_timezone()
+    selected_date = request.args.get("date", date.today().isoformat())
+    vice_entries = database.get_vices_by_date(user_id, selected_date)
+    vice_summary = database.get_vice_summary(user_id, selected_date)
+    vice_types = database.get_all_vice_types()
+    all_dates = database.get_vice_dates(user_id)
+    today = date.today().isoformat()
+
+    if today not in all_dates:
+        all_dates = [today] + list(all_dates)
+
+    return render_template(
+        "vices/dashboard.html",
+        vice_entries=vice_entries,
+        vice_summary=vice_summary,
+        vice_types=vice_types,
+        selected_date=selected_date,
+        all_dates=all_dates,
+        today=today,
+        username=user["username"] if user else "User",
+        is_oauth_user=session.get("auth_method") == "google",
+        tracker_type="vices"
+    )
+
+
+@vices_bp.route("/add", methods=["POST"])
+@login_required
+def add():
+    """Add a vice entry"""
+    user_id = session["user_id"]
+    vice_type_id = request.form.get("vice_type_id", "").strip()
+    quantity = request.form.get("quantity", "").strip()
+    entry_date = request.form.get("entry_date", date.today().isoformat())
+    notes = request.form.get("notes", "").strip()
+
+    if not vice_type_id or not quantity:
+        flash("Vice type and quantity are required.", "error")
+        return redirect(url_for("vices.index", date=entry_date))
+
+    try:
+        vice_type_id = int(vice_type_id)
+        quantity = float(quantity)
+        
+        if quantity <= 0:
+            raise ValueError
+            
+        # Verify vice type exists
+        vice_type = database.get_vice_type_by_id(vice_type_id)
+        if not vice_type:
+            flash("Invalid vice type.", "error")
+            return redirect(url_for("vices.index", date=entry_date))
+            
+    except ValueError:
+        flash("Quantity must be a positive number.", "error")
+        return redirect(url_for("vices.index", date=entry_date))
+
+    database.add_vice_entry(user_id, vice_type_id, quantity, entry_date, notes)
+    flash(f"Added {quantity} {vice_type['unit']} of {vice_type['name']}", "success")
+    return redirect(url_for("vices.index", date=entry_date))
+
+
+@vices_bp.route("/delete/<int:entry_id>", methods=["POST"])
+@login_required
+def delete(entry_id):
+    """Delete a vice entry"""
+    user_id = session["user_id"]
+    entry_date = request.form.get("entry_date", date.today().isoformat())
+    database.delete_vice_entry(entry_id, user_id)
+    flash("Vice entry deleted successfully.", "success")
+    return redirect(url_for("vices.index", date=entry_date))
+
+
+@vices_bp.route("/types", methods=["GET"])
+@login_required
+def get_types():
+    """Get all vice types as JSON"""
+    vice_types = database.get_all_vice_types()
+    return jsonify(vice_types)
+
+
+@vices_bp.route("/stats/<path:date_range>", methods=["GET"])
+@login_required
+def stats(date_range):
+    """Get vice statistics for a date range"""
+    user_id = session["user_id"]
+    # TODO: Implement statistics/analytics
+    # This can include weekly/monthly summaries, trends, etc.
+    return jsonify({"message": "Statistics endpoint - to be implemented"})
