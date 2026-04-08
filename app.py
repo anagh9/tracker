@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from dotenv import load_dotenv
 from datetime import date, datetime
 import os
@@ -10,6 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import json
 import requests
 from urllib.parse import urlencode
+from openai import OpenAI
 
 load_dotenv()
 
@@ -378,6 +379,75 @@ def auth_google_callback():
     except Exception as e:
         flash("An error occurred during authentication.", "error")
         return redirect(url_for("login"))
+
+
+@app.route("/suggest-food", methods=["POST"])
+@login_required
+def suggest_food():
+    """AI-powered food suggestion with minimal token consumption."""
+    try:
+        food_input = request.json.get("food_input", "").strip()
+        
+        if not food_input:
+            return jsonify({"error": "Food input is required"}), 400
+        
+        # Initialize OpenAI client
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify({"error": "OpenAI API key not configured"}), 500
+        
+        client = OpenAI(api_key=api_key)
+        
+        # Minimal prompt to reduce token consumption
+        system_prompt = "You are a calorie estimation assistant. Respond with ONLY: 'food_name: calories_number'. Be brief and accurate."
+        
+        # Call OpenAI API with gpt-3.5-turbo for cost efficiency
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": f"Estimate calories for: {food_input}"
+                }
+            ],
+            temperature=0,  # Deterministic for faster response
+            max_tokens=20   # Very short response only
+        )
+        
+
+        # Extract and parse the response
+        suggestion = response.choices[0].message.content.strip()
+        print(f"AI Suggestion: {suggestion}")  # Debug log
+        
+        # Parse response format: "food_name: calories_number"
+        if ":" in suggestion:
+            parts = suggestion.split(":")
+            food_name = parts[0].strip()
+            try:
+                calories = int(parts[-1].strip().split()[0])  # Extract number even if there's extra text
+                return jsonify({
+                    "food": food_name,
+                    "calories": calories,
+                    "suggestion": suggestion
+                })
+            except (ValueError, IndexError):
+                return jsonify({
+                    "error": "Could not parse calorie value from response",
+                    "raw_response": suggestion
+                }), 400
+        else:
+            return jsonify({
+                "error": "Invalid response format",
+                "raw_response": suggestion
+            }), 400
+    
+    except Exception as e:
+        print(f"Error in suggest_food: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
