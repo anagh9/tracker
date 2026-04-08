@@ -2,6 +2,9 @@
 Calorie Tracker Routes Blueprint
 """
 
+from datetime import datetime
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from datetime import date
 from pytz import timezone
@@ -14,6 +17,7 @@ from utils import login_required, get_timezone, get_today_iso
 from config import Config
 
 calorie_bp = Blueprint('calorie', __name__)
+
 
 @calorie_bp.route("/", methods=["GET"])
 @login_required
@@ -108,7 +112,8 @@ def export():
     # Style headers
     from openpyxl.styles import Font, PatternFill
     header_font = Font(bold=True)
-    header_fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
+    header_fill = PatternFill(start_color="FFA500",
+                              end_color="FFA500", fill_type="solid")
 
     for col in ["A1", "B1", "C1", "D1"]:
         ws[col].font = header_font
@@ -144,30 +149,108 @@ def export():
     )
 
 
+def validate_food_input(food_input: str) -> tuple[bool, str | None]:
+    """
+    Returns (True, None) if valid.
+    Returns (False, reason) if invalid.
+    """
+    FOOD_MIN_LEN = 2
+    FOOD_MAX_LEN = 200
+
+    # allowed: letters, digits, spaces, and common food punctuation
+    FOOD_ALLOWED_RE = re.compile(r"^[a-zA-Z0-9\s\-\',\.\(\)\/\%°&]+$")
+
+    # must contain at least one letter (rejects "123", "!!!", etc.)
+    FOOD_HAS_LETTER_RE = re.compile(r"[a-zA-Z]")
+
+    # obvious non-food / prompt-injection patterns
+    FOOD_BLOCKED_RE = re.compile(
+        r"(ignore|forget|pretend|you are|act as|system:|<.*?>|SELECT\s|DROP\s|INSERT\s)",
+        re.IGNORECASE
+    )
+    
+    if not food_input or not food_input.strip():
+        return False, "Food input cannot be empty."
+
+    s = food_input.strip()
+
+    if len(s) < FOOD_MIN_LEN:
+        return False, f"Food input too short (minimum {FOOD_MIN_LEN} characters)."
+
+    if len(s) > FOOD_MAX_LEN:
+        return False, f"Food input too long (maximum {FOOD_MAX_LEN} characters)."
+
+    if not FOOD_HAS_LETTER_RE.search(s):
+        return False, "Food input must contain at least one letter."
+
+    if not FOOD_ALLOWED_RE.match(s):
+        return False, "Food input contains invalid characters."
+
+    if FOOD_BLOCKED_RE.search(s):
+        return False, "Food input contains disallowed content."
+
+    return True, None
+
+
+def normalize_food_key(food_input: str) -> str:
+    """Normalize food string for consistent cache lookups."""
+    return re.sub(r'\s+', ' ', food_input.lower().strip())
+
+
 @calorie_bp.route("/suggest-food", methods=["POST"])
 @login_required
 def suggest_food():
-    """AI-powered food suggestion with OpenAI"""
+    """AI-powered food suggestion with caching."""
     try:
         food_input = request.json.get("food_input", "").strip()
-
         if not food_input:
             return jsonify({"error": "Food input is required"}), 400
 
+        is_valid, reason = validate_food_input(food_input)
+        if not is_valid:
+            return jsonify({"error": reason, "valid": False}), 422
+
+        food_key = normalize_food_key(food_input)
+
+        # ── 1. Cache lookup (fast path) ────────────────────────────────
+        db = database.get_connection()
+        cached = db.execute(
+            "SELECT food_name, calories FROM food_calorie_cache WHERE food_key = ?",
+            (food_key,)
+        ).fetchone()
+
+        if cached:
+            # Update access stats (fire-and-forget, non-blocking)
+            db.execute(
+                """UPDATE food_calorie_cache
+                   SET hit_count = hit_count + 1,
+                       last_accessed = ?
+                   WHERE food_key = ?""",
+                (datetime.utcnow(), food_key)
+            )
+            db.commit()
+            db.close()
+            return jsonify({
+                "food": cached["food_name"],
+                "calories": cached["calories"],
+                "suggestion": f"{cached['food_name']}: {cached['calories']}",
+                "cached": True   # optional: lets frontend know it was instant
+            })
+
+        # ── 2. Cache miss → call OpenAI ────────────────────────────────
         api_key = Config.OPENAI_API_KEY
         if not api_key:
             return jsonify({"error": "OpenAI API key not configured"}), 500
 
         client = OpenAI(api_key=api_key)
-
-        system_prompt = "You are a calorie estimation assistant. Respond with ONLY: 'food_name: calories_number'. Be brief and accurate."
-
         response = client.chat.completions.create(
             model=Config.OPENAI_MODEL,
             messages=[
                 {
                     "role": "system",
-                    "content": system_prompt
+                    "content": "You are a calorie estimation assistant. "
+                               "Respond with ONLY: 'food_name: calories_number'. "
+                               "Be brief and accurate."
                 },
                 {
                     "role": "user",
@@ -180,26 +263,44 @@ def suggest_food():
 
         suggestion = response.choices[0].message.content.strip()
 
-        if ":" in suggestion:
-            parts = suggestion.split(":")
-            food_name = parts[0].strip()
-            try:
-                calories = int(parts[-1].strip().split()[0])
-                return jsonify({
-                    "food": food_name,
-                    "calories": calories,
-                    "suggestion": suggestion
-                })
-            except (ValueError, IndexError):
-                return jsonify({
-                    "error": "Could not parse calorie value from response",
-                    "raw_response": suggestion
-                }), 400
-        else:
+        print(f"OpenAI response for '{food_input}': {suggestion}")
+
+        if ":" not in suggestion:
             return jsonify({
-                "error": "Invalid response format",
+                "error": f"Could not suggest calorie value for {food_input}",
                 "raw_response": suggestion
             }), 400
+
+        parts = suggestion.split(":")
+        food_name = parts[0].strip()
+        try:
+            calories = int(parts[-1].strip().split()[0])
+        except (ValueError, IndexError):
+            return jsonify({
+                "error": f"Could not suggest calorie value for {food_input}",
+                "raw_response": suggestion
+            }), 400
+
+        # ── 3. Store in cache ──────────────────────────────────────────
+        db.execute(
+            """INSERT INTO food_calorie_cache (food_key, food_name, calories)
+               VALUES (?, ?, ?)
+               ON CONFLICT(food_key) DO UPDATE SET
+                   calories = excluded.calories,
+                   food_name = excluded.food_name,
+                   hit_count = hit_count + 1,
+                   last_accessed = CURRENT_TIMESTAMP""",
+            (food_key, food_name, calories)
+        )
+        db.commit()
+        db.close()
+
+        return jsonify({
+            "food": food_name,
+            "calories": calories,
+            "suggestion": suggestion,
+            "cached": False
+        })
 
     except Exception as e:
         print(f"Error in suggest_food: {str(e)}")
@@ -214,7 +315,7 @@ def nutrient_breakdown():
         user_id = session["user_id"]
         selected_date = request.args.get("date", date.today().isoformat())
         entries = database.get_entries_by_date(user_id, selected_date)
-        
+
         if not entries:
             return jsonify({
                 "protein": 0,
@@ -224,20 +325,23 @@ def nutrient_breakdown():
                 "details": "No entries for this date",
                 "success": True
             })
-        
+
         # Check if nutrient data already exists in database
         cached_nutrients = database.get_nutrient_data(user_id, selected_date)
-        
+
         if cached_nutrients:
             # Return from database
             total_cals = sum(e['calories'] for e in entries)
             protein_cals = cached_nutrients['protein_grams'] * 4
             carbs_cals = cached_nutrients['carbs_grams'] * 4
             fats_cals = cached_nutrients['fats_grams'] * 9
-            
-            protein_pct = round((protein_cals / total_cals * 100)) if total_cals > 0 else 0
-            carbs_pct = round((carbs_cals / total_cals * 100)) if total_cals > 0 else 0
-            fats_pct = round((fats_cals / total_cals * 100)) if total_cals > 0 else 0
+
+            protein_pct = round(
+                (protein_cals / total_cals * 100)) if total_cals > 0 else 0
+            carbs_pct = round((carbs_cals / total_cals * 100)
+                              ) if total_cals > 0 else 0
+            fats_pct = round((fats_cals / total_cals * 100)
+                             ) if total_cals > 0 else 0
             return jsonify({
                 "protein": cached_nutrients['protein_grams'],
                 "protein_pct": protein_pct,
@@ -251,17 +355,18 @@ def nutrient_breakdown():
                 "success": True,
                 "from_cache": True
             })
-        
+
         # No cache found - call OpenAI to analyze nutrients
         # Prepare food list for nutrient analysis
-        food_list = "\n".join([f"- {e['food_item']} ({e['calories']} kcal)" for e in entries])
-        
+        food_list = "\n".join(
+            [f"- {e['food_item']} ({e['calories']} kcal)" for e in entries])
+
         api_key = Config.OPENAI_API_KEY
         if not api_key:
             return jsonify({"error": "OpenAI API key not configured"}), 500
-        
+
         client = OpenAI(api_key=api_key)
-        
+
         system_prompt = """You are a nutritionist analyzing daily food intake. Based on the food items and calories,
         estimate the macronutrient breakdown. Respond ONLY with valid JSON (no markdown, no extra text):
         {
@@ -271,7 +376,7 @@ def nutrient_breakdown():
             "fiber_grams": <number>,
             "analysis": "<brief summary>"
         }"""
-        
+
         response = client.chat.completions.create(
             model=Config.OPENAI_MODEL,
             messages=[
@@ -287,32 +392,35 @@ def nutrient_breakdown():
             temperature=Config.OPENAI_TEMPERATURE,
             max_tokens=500
         )
-        
+
         response_text = response.choices[0].message.content.strip()
-        
+
         # Clean response if wrapped in markdown code blocks
         if response_text.startswith("```"):
             response_text = response_text.split("```")[1]
             if response_text.startswith("json"):
                 response_text = response_text[4:]
-        
+
         import json
         result = json.loads(response_text)
-        
+
         # Calculate percentages
         total_cals = sum(e['calories'] for e in entries)
         protein_cals = result.get('protein_grams', 0) * 4
         carbs_cals = result.get('carbs_grams', 0) * 4
         fats_cals = result.get('fats_grams', 0) * 9
-        
-        protein_pct = round((protein_cals / total_cals * 100)) if total_cals > 0 else 0
-        carbs_pct = round((carbs_cals / total_cals * 100)) if total_cals > 0 else 0
-        fats_pct = round((fats_cals / total_cals * 100)) if total_cals > 0 else 0
-        
+
+        protein_pct = round((protein_cals / total_cals * 100)
+                            ) if total_cals > 0 else 0
+        carbs_pct = round((carbs_cals / total_cals * 100)
+                          ) if total_cals > 0 else 0
+        fats_pct = round((fats_cals / total_cals * 100)
+                         ) if total_cals > 0 else 0
+
         # Save nutrients to database for future use
         analysis = result.get('analysis', 'Daily nutrition analyzed')
         database.save_nutrient_data(
-            user_id, 
+            user_id,
             selected_date,
             result.get('protein_grams', 0),
             result.get('carbs_grams', 0),
@@ -320,7 +428,7 @@ def nutrient_breakdown():
             result.get('fiber_grams', 0),
             analysis
         )
-        
+
         return jsonify({
             "protein": result.get('protein_grams', 0),
             "protein_pct": protein_pct,
@@ -334,7 +442,7 @@ def nutrient_breakdown():
             "success": True,
             "from_cache": False
         })
-    
+
     except json.JSONDecodeError as e:
         print(f"JSON parse error: {str(e)}")
         return jsonify({"error": "Failed to parse nutrition data", "success": False}), 500

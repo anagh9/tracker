@@ -68,6 +68,24 @@ def init_db():
             FOREIGN KEY (vice_type_id) REFERENCES vice_types (id) ON DELETE CASCADE
         )
     """)
+
+    # Nutrient Calorie breakdown table (cache results from OpenAI analysis)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS food_calorie_cache (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            food_key TEXT NOT NULL UNIQUE,        -- normalized lookup key (lowercase, trimmed)
+            food_name TEXT NOT NULL,              -- display name from AI
+            calories INTEGER NOT NULL,
+            hit_count INTEGER DEFAULT 1,          -- track popularity
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.execute(""" CREATE INDEX IF NOT EXISTS idx_food_key ON food_calorie_cache(food_key) 
+     """)
+                 
     
     # Nutrient breakdown cache table
     conn.execute("""
