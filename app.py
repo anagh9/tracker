@@ -7,6 +7,9 @@ from pytz import timezone
 from openpyxl import Workbook
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
+import json
+import requests
+from urllib.parse import urlencode
 
 load_dotenv()
 
@@ -14,6 +17,14 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "fallback-secret")
 
 database.init_db()
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback")
+GOOGLE_AUTH_URI = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URI = "https://openidconnect.googleapis.com/v1/userinfo"
 
 
 def login_required(f):
@@ -108,40 +119,11 @@ def login():
     return render_template("login.html")
 
 
-@app.route("/signup", methods=["GET", "POST"])
+@app.route("/signup")
 def signup():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "").strip()
-        confirm_password = request.form.get("confirm_password", "").strip()
-        
-        # Validation
-        if not username or not email or not password:
-            flash("All fields are required.", "error")
-            return redirect(url_for("signup"))
-        
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.", "error")
-            return redirect(url_for("signup"))
-        
-        if password != confirm_password:
-            flash("Passwords do not match.", "error")
-            return redirect(url_for("signup"))
-        
-        # Create user
-        password_hash = generate_password_hash(password)
-        user_id = database.create_user(username, email, password_hash)
-        
-        if user_id:
-            session["user_id"] = user_id
-            flash(f"Welcome, {username}! Your account has been created.", "success")
-            return redirect(url_for("index"))
-        else:
-            flash("Username or email already exists.", "error")
-            return redirect(url_for("signup"))
-    
-    return render_template("signup.html")
+    """Redirect to Google OAuth signup"""
+    flash("Please sign up using Google to get started.", "info")
+    return redirect(url_for("login"))
 
 
 @app.route("/logout")
@@ -217,6 +199,127 @@ def export():
 
     filename = "calories_all_dates.xlsx"
     return send_file(excel_file, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name=filename)
+
+
+@app.route("/auth/google")
+def auth_google():
+    """Initiate Google OAuth flow"""
+    if not GOOGLE_CLIENT_ID:
+        flash("Google authentication is not configured.", "error")
+        return redirect(url_for("login"))
+    
+    # Generate authorization URL
+    auth_params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    
+    auth_url = f"{GOOGLE_AUTH_URI}?{urlencode(auth_params)}"
+    return redirect(auth_url)
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    """Handle Google OAuth callback"""
+    code = request.args.get("code")
+    error = request.args.get("error")
+    
+    if error:
+        flash("Google authentication failed.", "error")
+        return redirect(url_for("login"))
+    
+    if not code:
+        flash("No authorization code received.", "error")
+        return redirect(url_for("login"))
+    
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        flash("Google authentication is not configured.", "error")
+        return redirect(url_for("login"))
+    
+    try:
+        # Exchange code for token
+        token_data = {
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code"
+        }
+        
+        token_response = requests.post(GOOGLE_TOKEN_URI, data=token_data, timeout=10)
+        
+        if token_response.status_code != 200:
+            flash("Failed to get token from Google.", "error")
+            return redirect(url_for("login"))
+        
+        tokens = token_response.json()
+        access_token = tokens.get("access_token")
+        
+        if not access_token:
+            flash("Failed to get access token.", "error")
+            return redirect(url_for("login"))
+        
+        # Get user info
+        user_info_response = requests.get(
+            GOOGLE_USERINFO_URI,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10
+        )
+        
+        if user_info_response.status_code != 200:
+            flash("Failed to get user information from Google.", "error")
+            return redirect(url_for("login"))
+        
+        user_info = user_info_response.json()
+        email = user_info.get("email")
+        name = user_info.get("name", "User")
+        
+        if not email:
+            flash("Could not get email from Google.", "error")
+            return redirect(url_for("login"))
+        
+        # Find or create user
+        user = database.get_user_by_email(email)
+        
+        if user:
+            # Existing user, log them in
+            session["user_id"] = user["id"]
+            flash(f"Welcome back, {user['username']}!", "success")
+            return redirect(url_for("index"))
+        else:
+            # New user, create account
+            # Generate username from email (first part) with unique suffix if needed
+            base_username = email.split("@")[0]
+            username = base_username
+            counter = 1
+            
+            # Ensure username is different from email and is unique
+            while database.get_user_by_username(username) or username == email:
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            # Create user with Google OAuth (no password)
+            password_hash = generate_password_hash(os.urandom(24).hex())
+            user_id = database.create_user(username, email, password_hash)
+            
+            if user_id:
+                session["user_id"] = user_id
+                flash(f"Welcome, {username}! Your account has been created via Google Sign-In.", "success")
+                return redirect(url_for("index"))
+            else:
+                flash("Failed to create user account.", "error")
+                return redirect(url_for("login"))
+    
+    except requests.exceptions.RequestException as e:
+        flash("Network error during authentication.", "error")
+        return redirect(url_for("login"))
+    except Exception as e:
+        flash("An error occurred during authentication.", "error")
+        return redirect(url_for("login"))
 
 
 if __name__ == "__main__":

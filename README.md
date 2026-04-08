@@ -5,7 +5,7 @@ A modern, responsive web application for tracking daily calorie intake with user
 ## ✨ Features
 
 ### Core Functionality
-- 🔐 **User Authentication** - Secure login & signup system
+- 🔐 **Google Sign-In** - Secure authentication with Google OAuth
 - 📊 **Dashboard** - Track daily calorie intake with interactive visualizations
 - 📈 **Pie Chart Visualization** - See food distribution by calories
 - 🧮 **Calorie Calculator** - Calculate daily calorie needs (Mifflin-St Jeor formula)
@@ -15,9 +15,10 @@ A modern, responsive web application for tracking daily calorie intake with user
 - 🎨 **Modern UI** - Clean, minimalist design with smooth animations
 
 ### User Management
+- Google OAuth 2.0 integration with automatic account creation
+- One-click sign-in with Google account
 - User-isolated data (each user sees only their entries)
-- Secure password hashing with Werkzeug
-- Account creation with email validation
+- Automatic username generation from email
 - User profile in sidebar
 
 ## 📁 Project Structure
@@ -49,23 +50,45 @@ tracker/
 
 ## 🚀 Quick Start
 
-### 1. Clone & Setup
+### 1. Prerequisites
+Before running CalTrack, you need Google OAuth credentials:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials (Web application)
+5. Add redirect URI: `http://localhost:5000/auth/google/callback`
+6. Copy your Client ID and Client Secret
+
+For detailed instructions, see [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
+
+### 2. Clone & Setup
 ```bash
 git clone <repository-url>
 cd tracker
 pip install -r requirements.txt
 ```
 
-### 2. Run the Application
+### 3. Configure Google OAuth
+Create/update `.env` file:
+```env
+GOOGLE_CLIENT_ID='your-client-id.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET='your-client-secret'
+GOOGLE_REDIRECT_URI='http://localhost:5000/auth/google/callback'
+SECRET_KEY='your-secret-key'
+```
+
+### 4. Run the Application
 ```bash
 python app.py
 ```
 
 Visit `http://127.0.0.1:5000` in your browser.
 
-### 3. Create an Account
-- Click "Sign up" on the login page
-- Enter username, email, and password
+### 5. Sign In
+- Click "Sign in with Google"
+- Use your Google account
+- Your CalTrack account is created automatically
 - Start tracking your calories!
 
 ## 🔧 Installation Details
@@ -84,7 +107,10 @@ pip install -r requirements.txt
 - python-dotenv 1.0.1 - Environment variables
 - pytz - Timezone support
 - openpyxl - Excel export
-- Werkzeug 3.0.1 - Password hashing
+- Werkzeug 3.0.1 - Utilities for password hashing
+- google-auth-oauthlib 1.2.0 - Google OAuth integration
+- google-auth-httplib2 0.2.0 - Google auth HTTP support
+- requests 2.31.0 - HTTP requests
 - Chart.js 4.4.0 - Data visualization (CDN)
 
 ## 📊 Database Schema
@@ -168,11 +194,13 @@ See [scripts/MIGRATION.md](scripts/MIGRATION.md) for detailed migration instruct
 
 ## 🔐 Security Features
 
-- **Password Hashing** - Werkzeug's secure_password functions
-- **Session Management** - secure_key based sessions
+- **Google OAuth 2.0** - Secure authentication via Google
+- **Session Management** - Secure session-based authentication
 - **User Isolation** - Users only see their own data
 - **Unique Constraints** - Prevent duplicate usernames/emails
-- **Foreign Keys** - Referential integrity
+- **Foreign Keys** - Referential integrity for data consistency
+- **No Password Storage** - No passwords stored locally (OAuth handles auth)
+- **HTTPS Ready** - Production-ready for HTTPS deployment
 
 ## 📱 Responsive Design
 
@@ -209,13 +237,17 @@ Features:
 Create `.env` file in project root:
 
 ```env
-FLASK_ENV=development
-SECRET_KEY=your-secret-key-here
-IDENTITY=admin
-PASSWORD=admin
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID='your-client-id.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET='your-client-secret-here'
+GOOGLE_REDIRECT_URI='http://localhost:5000/auth/google/callback'
+
+# Flask Configuration
+SECRET_KEY='your-secret-key-here'
 ```
 
-**Note:** The `IDENTITY` and `PASSWORD` variables are legacy and replaced by user authentication.
+Get your Google OAuth credentials from [Google Cloud Console](https://console.cloud.google.com/).
+See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for detailed setup instructions.
 
 ## 🐛 Troubleshooting
 
