@@ -1,167 +1,381 @@
 {% extends "base.html" %}
 {% block content %}
 
-<!-- Top nav -->
-<nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-200 px-8 py-3 flex items-center justify-between">
+<div class="flex h-screen bg-stone-50">
 
-  <!-- LEFT: Logo -->
-  <div class="flex items-center">
-    <span class="mono text-xl font-semibold tracking-tight text-stone-900">
-      cal<span class="text-orange-500">track</span>
-    </span>
-  </div>
-
-  <!-- CENTER: Date -->
-  <form method="GET" action="/" class="flex items-center gap-2">
-    <input type="date" name="date" value="{{ selected_date }}"
-      class="border border-stone-200 rounded-xl px-4 py-2 text-sm bg-stone-50 
-             focus:outline-none focus:ring-2 focus:ring-orange-400 
-             focus:bg-white transition">
-
-    <button type="submit"
-      class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium 
-             px-4 py-2 rounded-xl transition shadow-sm hover:shadow-md">
-      Go
-    </button>
-  </form>
-
-  <!-- RIGHT: Actions -->
-  <div class="flex items-center gap-3">
-
-    <!-- Export Icon -->
-    <a href="/export"
-      class="w-10 h-10 flex items-center justify-center rounded-xl 
-             border border-stone-200 hover:border-stone-300 
-             hover:bg-stone-100 transition"
-      title="Export">
-      
-      <!-- Download Icon -->
-      <svg xmlns="http://www.w3.org/2000/svg" 
-           class="w-5 h-5 text-stone-600"
-           fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
-      </svg>
-    </a>
-
-    <!-- Avatar -->
-    <div class="w-10 h-10 rounded-full 
-                bg-gradient-to-br from-orange-400 to-orange-500 
-                flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-      {{ username[0:2].upper() }}
+  <!-- LEFT SIDEBAR NAVIGATION -->
+  <aside class="w-64 bg-white border-r border-stone-200 shadow-sm flex flex-col">
+    
+    <!-- Logo Section -->
+    <div class="px-6 py-6 border-b border-stone-200">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🔥</span>
+        <span class="mono text-lg font-bold text-stone-900">
+          cal<span class="text-orange-500">track</span>
+        </span>
+      </div>
+      <p class="text-xs text-stone-400 mt-1">calorie journal</p>
     </div>
 
-    <!-- Logout -->
-    <a href="/logout"
-      class="text-sm border border-stone-200 hover:border-red-400 
-             hover:text-red-500 text-stone-600 font-medium 
-             px-4 py-2 rounded-xl transition">
-      Logout
-    </a>
+    <!-- Navigation Items -->
+    <nav class="flex-1 px-3 py-6 space-y-2">
+      
+      <!-- Dashboard -->
+      <a href="/" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                         bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200">
+        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 13l4-8m4 8V5m0 0H7m0 0L3 9" />
+        </svg>
+        <span class="font-medium text-sm">Dashboard</span>
+      </a>
 
-  </div>
-</nav>
-<div class="flex min-h-[calc(100vh-57px)]">
+      <!-- History -->
+      <button onclick="toggleHistoryNav()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                                                  text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="font-medium text-sm">History</span>
+        <svg id="historyIcon" class="w-4 h-4 ml-auto transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
 
-  <!-- Sidebar: past dates -->
-  <aside class="w-52 shrink-0 border-r border-stone-200 bg-white p-4 hidden md:block">
-    <p class="text-xs uppercase tracking-widest text-stone-400 font-medium mb-3">History</p>
-    <ul class="space-y-1">
-      {% for d in all_dates %}
-      <li>
-        <a href="/?date={{ d }}"
-          class="block text-sm px-3 py-2 rounded-lg transition
-            {% if d == selected_date %}bg-orange-50 text-orange-600 font-medium{% else %}text-stone-500 hover:bg-stone-100{% endif %}">
+      <!-- History Submenu -->
+      <div id="historyMenu" class="hidden pl-4 space-y-1 max-h-48 overflow-y-auto">
+        {% for d in all_dates %}
+        <a href="/?date={{ d }}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
+                                        {% if d == selected_date %}bg-orange-50 text-orange-600 border-l-2 border-orange-500 font-medium{% else %}text-stone-600 hover:bg-stone-100{% endif %}">
           {% if d == today %}
-            <span class="mono">today</span>
+            <span class="text-xs">📌</span>
+            <span class="mono text-sm font-medium">Today</span>
           {% else %}
-            <span class="mono">{{ d }}</span>
+            <span class="text-xs">📄</span>
+            <span class="mono text-sm">{{ d }}</span>
           {% endif %}
         </a>
-      </li>
-      {% endfor %}
-    </ul>
+        {% endfor %}
+      </div>
+
+      <!-- Calculator -->
+      <button onclick="openCalculatorModal()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                                                    text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+        <span class="font-medium text-sm">Calculator</span>
+        <span class="ml-auto text-lg">🧮</span>
+      </button>
+
+      <!-- Export -->
+      <a href="/export" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                              text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+        </svg>
+        <span class="font-medium text-sm">Export</span>
+      </a>
+
+    </nav>
+
+    <!-- Footer Section - User Info -->
+    <div class="px-3 py-6 border-t border-stone-200 space-y-3">
+      
+      <!-- User Card -->
+      <div class="bg-stone-50 rounded-lg p-3 border border-stone-200">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 
+                      flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+            {{ username[0:2].upper() }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-stone-900 truncate">{{ username }}</p>
+            <p class="text-xs text-stone-500 truncate">User</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logout Button -->
+      <a href="/logout" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
+                              bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-medium text-sm justify-center">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Logout
+      </a>
+    </div>
   </aside>
 
-  <!-- Main content -->
-  <main class="flex-1 p-6 max-w-2xl">
-
-    <!-- Date header -->
-    <div class="mb-6">
-      <h1 class="text-xl font-semibold text-stone-900">
-        {% if selected_date == today %}Today{% else %}{{ selected_date }}{% endif %}
-      </h1>
-      <p class="mono text-sm text-stone-400 mt-0.5">{{ selected_date }}</p>
-    </div>
-
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for cat, msg in messages %}
-        <div class="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{{ msg }}</div>
-      {% endfor %}
-    {% endwith %}
-
-    <!-- Calorie summary card -->
-    <div class="bg-white border border-stone-200 rounded-xl p-5 mb-6 flex items-center justify-between">
-      <div>
-        <p class="text-xs text-stone-400 uppercase tracking-widest font-medium mb-1">Total Calories</p>
-        <p class="mono text-3xl font-medium text-stone-900">{{ total }} <span class="text-sm text-stone-400">kcal</span></p>
+  <!-- MAIN CONTENT AREA -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    
+    <!-- TOP HEADER -->
+    <header class="bg-white border-b border-stone-200 px-8 py-5 shadow-sm">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-stone-900">
+            {% if selected_date == today %}Today's Tracking{% else %}{{ selected_date }}{% endif %}
+          </h1>
+          <p class="text-sm text-stone-500 mt-1 mono">{{ selected_date }}</p>
+        </div>
+        
+        <!-- Quick Date Selector -->
+        <form method="GET" action="/" class="flex items-center gap-2">
+          <input type="date" name="date" value="{{ selected_date }}"
+            class="border border-stone-200 rounded-lg px-4 py-2 text-sm bg-stone-50 
+                   focus:outline-none focus:ring-2 focus:ring-orange-400 
+                   focus:bg-white transition">
+          <button type="submit"
+            class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium 
+                   px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md">
+            Go
+          </button>
+        </form>
       </div>
-      <div class="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center">
-        <span class="text-2xl">🔥</span>
-      </div>
-    </div>
+    </header>
 
-    <!-- Add entry form -->
-    {% if selected_date == today %}
-    <div class="bg-white border border-stone-200 rounded-xl p-5 mb-6">
-      <p class="text-xs text-stone-400 uppercase tracking-widest font-medium mb-4">Add Entry</p>
-      <form method="POST" action="/add" class="flex gap-3 flex-wrap">
-        <input type="hidden" name="entry_date" value="{{ selected_date }}">
-        <input type="text" name="food_item" placeholder="Food item…" required
-          class="flex-1 min-w-[160px] border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition">
-        <input type="number" name="calories" placeholder="kcal" required min="1"
-          class="w-24 border border-stone-200 rounded-lg px-3 py-2 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 transition mono">
-        <button type="submit"
-          class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-5 py-2 rounded-lg transition">
-          + Add
-        </button>
-      </form>
-    </div>
-    {% endif %}
+    <!-- SCROLLABLE CONTENT -->
+    <main class="flex-1 overflow-y-auto">
+      <div class="p-8 max-w-4xl">
 
-    <!-- Entries list -->
-    <div class="space-y-2">
-      {% if entries %}
-        {% for entry in entries %}
-        <div class="bg-white border border-stone-200 rounded-xl px-5 py-4 flex items-center justify-between group">
-          <div>
-            <p class="text-sm font-medium text-stone-800">{{ entry["food_item"] }}</p>
-            <p class="mono text-xs text-stone-400 mt-0.5">{{ entry["created_at"][:16] }}</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <span class="mono text-sm font-medium text-orange-500">{{ entry["calories"] }} kcal</span>
-            {% if selected_date == today %}
-            <form method="POST" action="/delete/{{ entry['id'] }}">
-              <input type="hidden" name="entry_date" value="{{ selected_date }}">
-              <button type="submit"
-                class="text-stone-300 hover:text-red-400 transition text-xs opacity-0 group-hover:opacity-100">
-                ✕
-              </button>
-            </form>
-            {% endif %}
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for cat, msg in messages %}
+            <div class="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{{ msg }}</div>
+          {% endfor %}
+        {% endwith %}
+
+        <!-- Calorie Summary Card -->
+        <div class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Daily Total</p>
+              <p class="mono text-5xl font-bold text-orange-600">{{ total }}</p>
+              <p class="text-sm text-stone-600 mt-1">kcal consumed</p>
+            </div>
+            <div class="text-7xl opacity-20">🔥</div>
           </div>
         </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-center py-16 text-stone-300">
-          <p class="text-4xl mb-3">🍽️</p>
-          <p class="text-sm">No entries yet for this day.</p>
-        </div>
-      {% endif %}
-    </div>
 
-  </main>
+        <!-- Add Entry Form -->
+        {% if selected_date == today %}
+        <div class="bg-white border border-stone-200 rounded-xl p-6 mb-6 shadow-sm">
+          <p class="text-xs text-stone-400 uppercase tracking-widest font-semibold mb-4">Add New Entry</p>
+          <form method="POST" action="/add" class="flex gap-3 flex-wrap">
+            <input type="hidden" name="entry_date" value="{{ selected_date }}">
+            <input type="text" name="food_item" placeholder="What did you eat?" required
+              class="flex-1 min-w-[200px] border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition">
+            <input type="number" name="calories" placeholder="kcal" required min="1"
+              class="w-28 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
+            <button type="submit"
+              class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm hover:shadow-md">
+              + Add
+            </button>
+          </form>
+        </div>
+        {% endif %}
+
+        <!-- Entries List -->
+        <div class="space-y-2">
+          {% if entries %}
+            {% for entry in entries %}
+            <div class="bg-white border border-stone-200 rounded-lg px-5 py-4 flex items-center justify-between group hover:shadow-md transition-all duration-200">
+              <div>
+                <p class="text-sm font-semibold text-stone-800">{{ entry["food_item"] }}</p>
+                <p class="mono text-xs text-stone-400 mt-1">{{ entry["created_at"][:16] }}</p>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="mono text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg">{{ entry["calories"] }} kcal</span>
+                {% if selected_date == today %}
+                <form method="POST" action="/delete/{{ entry['id'] }}">
+                  <input type="hidden" name="entry_date" value="{{ selected_date }}">
+                  <button type="submit" title="Delete entry"
+                    class="text-stone-300 hover:text-red-500 transition text-sm opacity-0 group-hover:opacity-100 font-bold">
+                    ✕
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-12 text-center">
+              <p class="text-5xl mb-3">🍽️</p>
+              <p class="text-stone-500 font-medium">No entries yet for this day</p>
+              <p class="text-xs text-stone-400 mt-2">Start tracking by adding your first meal</p>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </main>
+  </div>
 </div>
+
+<!-- Calorie Calculator Modal -->
+<div id="calculatorModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+    
+    <!-- Modal Header -->
+    <div class="sticky top-0 bg-gradient-to-r from-orange-400 to-orange-500 px-6 py-5 flex items-center justify-between border-b border-orange-600">
+      <h2 class="text-xl font-bold text-white">🧮 Calorie Calculator</h2>
+      <button onclick="closeCalculatorModal()" class="text-white hover:bg-orange-600 p-1 rounded-lg transition">
+        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-6 space-y-4">
+      <p class="text-sm text-stone-600 mb-6">Calculate your daily calorie needs based on personal information</p>
+
+      <!-- Gender Selection -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Gender</label>
+        <div class="flex gap-3">
+          <label class="flex items-center cursor-pointer">
+            <input type="radio" name="gender" value="male" checked class="w-4 h-4 text-orange-500">
+            <span class="ml-2 text-sm text-stone-700">Male</span>
+          </label>
+          <label class="flex items-center cursor-pointer">
+            <input type="radio" name="gender" value="female" class="w-4 h-4 text-orange-500">
+            <span class="ml-2 text-sm text-stone-700">Female</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Age -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Age (years)</label>
+        <input type="number" id="age" min="10" max="120" placeholder="25" 
+          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+      </div>
+
+      <!-- Height -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Height (cm)</label>
+        <input type="number" id="height" min="100" max="250" placeholder="175" 
+          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+      </div>
+
+      <!-- Weight -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Weight (kg)</label>
+        <input type="number" id="weight" min="30" max="200" step="0.1" placeholder="75" 
+          class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+      </div>
+
+      <!-- Activity Level -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Activity Level</label>
+        <select id="activity" class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          <option value="1.2">Sedentary (little or no exercise)</option>
+          <option value="1.375" selected>Lightly active (1-3 days/week)</option>
+          <option value="1.55">Moderately active (3-5 days/week)</option>
+          <option value="1.725">Very active (6-7 days/week)</option>
+          <option value="1.9">Extremely active (physical job + training)</option>
+        </select>
+      </div>
+
+      <!-- Result -->
+      <div id="resultContainer" class="hidden mt-6 p-4 bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl">
+        <p class="text-xs uppercase tracking-widest text-orange-600 font-semibold mb-2">Your Daily Need</p>
+        <div class="flex items-baseline gap-2">
+          <span class="mono text-4xl font-bold text-orange-600" id="dailyCalories">2400</span>
+          <span class="text-stone-600 text-sm">kcal/day</span>
+        </div>
+        <p class="text-xs text-stone-600 mt-3" id="resultDetails"></p>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 pt-4">
+        <button onclick="calculateCalories()" 
+          class="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 
+                   text-white font-semibold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md">
+          Calculate
+        </button>
+        <button onclick="closeCalculatorModal()" 
+          class="flex-1 border border-stone-200 hover:border-stone-300 hover:bg-stone-50 
+                   text-stone-700 font-semibold py-3 px-4 rounded-xl transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+  // History Navigation Toggle
+  function toggleHistoryNav() {
+    const menu = document.getElementById('historyMenu');
+    const icon = document.getElementById('historyIcon');
+    menu.classList.toggle('hidden');
+    icon.classList.toggle('rotate-90');
+  }
+
+  // Calculator Modal Functions
+  function openCalculatorModal() {
+    document.getElementById('calculatorModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCalculatorModal() {
+    document.getElementById('calculatorModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  // Calculate Daily Calories using Mifflin-St Jeor Formula
+  function calculateCalories() {
+    const age = parseFloat(document.getElementById('age').value);
+    const height = parseFloat(document.getElementById('height').value);
+    const weight = parseFloat(document.getElementById('weight').value);
+    const activity = parseFloat(document.getElementById('activity').value);
+    const gender = document.querySelector('input[name="gender"]:checked').value;
+
+    if (!age || !height || !weight) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    let bmr;
+    if (gender === 'male') {
+      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+    } else {
+      bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+    }
+
+    const tdee = Math.round(bmr * activity);
+    
+    const resultContainer = document.getElementById('resultContainer');
+    document.getElementById('dailyCalories').textContent = tdee.toLocaleString();
+    
+    const details = `<strong>Breakdown:</strong><br>
+      Base Metabolic Rate (BMR): ${Math.round(bmr)} kcal<br>
+      Activity Level: ${(activity * 100 - 100).toFixed(0)}% above BMR<br><br>
+      <strong>Recommendation:</strong><br>
+      • To maintain: ${tdee} kcal/day<br>
+      • To lose weight: ${Math.round(tdee * 0.85)} kcal/day<br>
+      • To gain weight: ${Math.round(tdee * 1.15)} kcal/day`;
+    
+    document.getElementById('resultDetails').innerHTML = details;
+    resultContainer.classList.remove('hidden');
+  }
+
+  // Allow Enter key to calculate
+  document.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
+      calculateCalories();
+    }
+  });
+
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
+      closeCalculatorModal();
+    }
+  });
+</script>
 
 {% endblock %}
