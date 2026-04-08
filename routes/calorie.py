@@ -5,7 +5,7 @@ Calorie Tracker Routes Blueprint
 from datetime import datetime
 import re
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify, Response
 from datetime import date
 from pytz import timezone
 from openpyxl import Workbook
@@ -141,11 +141,12 @@ def export():
     wb.save(output)
     output.seek(0)
 
-    return send_file(
-        output,
+    return Response(
+        output.getvalue(),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True,
-        download_name=f"calorie_tracker_{date.today()}.xlsx"
+        headers={
+            "Content-Disposition": f"attachment; filename=calorie_tracker_{date.today()}.xlsx"
+        }
     )
 
 
@@ -168,7 +169,7 @@ def validate_food_input(food_input: str) -> tuple[bool, str | None]:
         r"(ignore|forget|pretend|you are|act as|system:|<.*?>|SELECT\s|DROP\s|INSERT\s)",
         re.IGNORECASE
     )
-    
+
     if not food_input or not food_input.strip():
         return False, "Food input cannot be empty."
 
