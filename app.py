@@ -399,7 +399,7 @@ def suggest_food():
         client = OpenAI(api_key=api_key)
         
         # Minimal prompt to reduce token consumption
-        system_prompt = "You are a calorie estimation assistant. Respond with ONLY: 'food_name: calories_number'. Be brief and accurate."
+        system_prompt = "You are a calorie estimation assistant. Respond ONLY in this format: food_name: calories_number. Be brief and accurate.."
         
         # Call OpenAI API with gpt-3.5-turbo for cost efficiency
         response = client.chat.completions.create(
