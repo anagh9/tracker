@@ -21,7 +21,19 @@ A modern, responsive web application for tracking daily calorie intake with user
 - Automatic username generation from email
 - User profile in sidebar
 
-## 📁 Project Structure
+## � Screenshots
+
+### Dashboard
+![CalTrack Dashboard](assets/image.png)
+
+The dashboard provides a comprehensive overview of your daily calorie intake with:
+- **Daily Total** - Total calories consumed for the selected date
+- **Food Distribution** - Pie chart showing breakdown by food item
+- **Food Entries** - Detailed list of all items consumed
+- **Statistics** - Most consumed food, items logged, and average calories per item
+- **Progress** - Visual progress bar towards daily calorie goal
+
+## �📁 Project Structure
 
 ```
 tracker/
