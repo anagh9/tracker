@@ -1,12 +1,13 @@
-# CalTrack - Calorie Tracker
+# CalTrack - Tracker App
 
-A modern, responsive web application for tracking daily calorie intake with user authentication, data visualization, and export functionality.
+A modern, responsive web application for tracking calories, habits, and other user-selected behaviors with authentication, personalization, and dashboard insights.
 
 ## ✨ Features
 
 ### Core Functionality
 - 🔐 **Google Sign-In** - Secure authentication with Google OAuth
 - 📊 **Dashboard** - Track daily calorie intake with interactive visualizations
+- 🧭 **Personalized Onboarding** - Ask users what they want to track and tailor the dashboard around those answers
 - 📈 **Pie Chart Visualization** - See food distribution by calories
 - 🧮 **Calorie Calculator** - Calculate daily calorie needs (Mifflin-St Jeor formula)
 - 📅 **History** - Browse and select entries from any date
@@ -24,7 +25,7 @@ A modern, responsive web application for tracking daily calorie intake with user
 ## � Screenshots
 
 ### Dashboard
-![CalTrack Dashboard](assets/image.png)
+![CalTrack Dashboard](../assets/image.png)
 
 The dashboard provides a comprehensive overview of your daily calorie intake with:
 - **Daily Total** - Total calories consumed for the selected date
@@ -41,22 +42,30 @@ tracker/
 ├── database.py                 # SQLite database management
 ├── requirements.txt            # Python dependencies
 ├── calories.db                 # SQLite database
-├── README.md                   # This file
-│
 ├── assets/                     # Static assets
 │   └── [images]
+│
+├── docs/                       # Product and technical documentation
+│   ├── README.md               # Main project guide
+│   └── ONBOARDING_PERSONALIZATION.md
 │
 ├── scripts/                    # Utility scripts
 │   ├── __init__.py
 │   ├── load_data.py           # Sample data loader
 │   ├── migrate_add_user_id.py              # Migration script (auto)
-│   ├── migrate_add_user_id_manual.py       # Migration script (manual)
-│   └── MIGRATION.md           # Migration documentation
+│   └── migrate_add_user_id_manual.py       # Migration script (manual)
+│
+├── services/                   # Business logic and personalization
+│   └── personalization.py
+│
+├── routes/                     # Route blueprints
+│   └── onboarding.py
 │
 └── templates/                  # HTML templates
     ├── base.html              # Base template with Chart.js
     ├── dashboard.html         # Main dashboard
-    ├── login.html             # Login page
+    ├── onboarding.html        # Onboarding flow
+    ├── auth/login.html        # Login page
     └── signup.html            # Signup page
 ```
 

@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_35%),linear-gradient(135deg,_#f8fafc,_#eff6ff,_#ecfeff)]">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8 flex items-center justify-between gap-4">
+      <div>
+        <p class="mono text-sm uppercase tracking-[0.3em] text-sky-700">Personalized onboarding</p>
+        <h1 class="mt-2 text-4xl font-bold text-slate-900">
+          {{ "Refine your dashboard" if is_editing else "Let’s shape your tracker experience" }}
+        </h1>
+        <p class="mt-3 max-w-2xl text-slate-600">
+          Move through one question at a time and we’ll build a dashboard around what matters most to you.
+        </p>
+      </div>
+      <a href="/" class="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-400 hover:text-slate-900 transition">
+        Skip to dashboard
+      </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="mb-6 rounded-2xl border px-5 py-4 text-sm {% if cat == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-rose-200 bg-rose-50 text-rose-700{% endif %}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" id="onboardingForm" class="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
+      <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-6 sm:p-8 shadow-lg shadow-slate-200/60 backdrop-blur">
+        <div class="mb-6">
+          <div class="flex items-center justify-between gap-4">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Setup progress</p>
+            <p class="text-sm font-medium text-slate-600"><span id="currentStepLabel">1</span> / <span id="totalStepCount">4</span></p>
+          </div>
+          <div class="mt-3 h-2 rounded-full bg-slate-200">
+            <div id="stepProgressBar" class="h-2 rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 transition-all duration-300" style="width: 25%"></div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <section class="step-panel" data-step="1">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Step 1</p>
+            <h2 class="mt-3 text-3xl font-bold text-slate-900">What’s your main goal right now?</h2>
+            <p class="mt-2 text-sm text-slate-600">This helps us decide which kind of progress to emphasize first.</p>
+            <div class="mt-6 grid gap-4">
+              {% for goal in goal_options %}
+              <label class="group cursor-pointer rounded-2xl border border-slate-200 p-5 transition hover:border-sky-300 hover:bg-sky-50/60">
+                <div class="flex gap-4">
+                  <input type="radio" name="primary_goal" value="{{ goal.value }}" class="mt-1 h-4 w-4 text-sky-600 focus:ring-sky-500" {% if primary_goal == goal.value %}checked{% endif %} required>
+                  <div>
+                    <p class="font-semibold text-slate-900">{{ goal.label }}</p>
+                    <p class="mt-1 text-sm text-slate-600">{{ goal.description }}</p>
+                  </div>
+                </div>
+              </label>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="step-panel hidden" data-step="2">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Step 2</p>
+            <h2 class="mt-3 text-3xl font-bold text-slate-900">What do you want to track?</h2>
+            <p class="mt-2 text-sm text-slate-600">Pick the trackers you want active in your routine.</p>
+            <div class="mt-6 grid gap-4 sm:grid-cols-2">
+              {% for tracker in tracker_options %}
+              <label class="cursor-pointer rounded-2xl border border-slate-200 p-5 transition hover:border-amber-300 hover:bg-amber-50/60">
+                <div class="flex gap-4">
+                  <input type="checkbox" name="selected_trackers" value="{{ tracker.value }}" class="tracker-checkbox mt-1 h-4 w-4 rounded text-amber-500 focus:ring-amber-400" {% if tracker.value in selected_trackers %}checked{% endif %}>
+                  <div>
+                    <p class="font-semibold text-slate-900">{{ tracker.label }}</p>
+                    <p class="mt-1 text-sm text-slate-600">{{ tracker.description }}</p>
+                  </div>
+                </div>
+              </label>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="step-panel hidden" data-step="3">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Step 3</p>
+            <h2 class="mt-3 text-3xl font-bold text-slate-900">Which areas deserve extra attention?</h2>
+            <p class="mt-2 text-sm text-slate-600">We’ll use these choices to bring the right cards and recommendations forward.</p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              {% for focus in focus_options %}
+              <label class="cursor-pointer">
+                <input type="checkbox" name="focus_habits" value="{{ focus.value }}" class="peer sr-only" {% if focus.value in focus_habits %}checked{% endif %}>
+                <span class="inline-flex rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600 transition peer-checked:border-sky-500 peer-checked:bg-sky-500 peer-checked:text-white hover:border-slate-400">
+                  {{ focus.label }}
+                </span>
+              </label>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section id="calorieSetupSection" class="step-panel hidden" data-step="4">
+            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-orange-600">Step 4</p>
+            <h2 class="mt-3 text-3xl font-bold text-slate-900">Set up your calorie target</h2>
+            <p class="mt-2 text-sm text-slate-600">
+              Since you chose the calorie tracker, we’ll calculate a daily target and reuse it across the dashboard and recommendations.
+            </p>
+
+            <div class="mt-6 grid gap-4">
+              <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Calorie goal</label>
+                <div class="grid gap-3 sm:grid-cols-3">
+                  {% for goal in calorie_goal_options %}
+                  <label class="rounded-2xl border border-orange-200 bg-white p-4 cursor-pointer hover:border-orange-300 transition">
+                    <input type="radio" name="calorie_goal_type" value="{{ goal.value }}" class="mr-2 h-4 w-4 text-orange-500 focus:ring-orange-400" {% if calorie_profile and calorie_profile.goal_type == goal.value %}checked{% elif not calorie_profile and loop.index == 2 %}checked{% endif %}>
+                    <span class="font-semibold text-slate-900">{{ goal.label }}</span>
+                    <p class="mt-1 text-xs text-slate-600">{{ goal.description }}</p>
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-slate-700">Sex</label>
+                  <select name="calorie_sex" class="w-full rounded-xl border border-orange-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <option value="">Select</option>
+                    {% for option in calorie_sex_options %}
+                    <option value="{{ option.value }}" {% if calorie_profile and calorie_profile.sex == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-slate-700">Age</label>
+                  <input type="number" name="calorie_age" min="18" max="100" value="{{ calorie_profile.age if calorie_profile else '' }}" class="w-full rounded-xl border border-orange-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="28">
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-slate-700">Height (cm)</label>
+                  <input type="number" name="calorie_height_cm" min="120" max="250" step="0.1" value="{{ calorie_profile.height_cm if calorie_profile else '' }}" class="w-full rounded-xl border border-orange-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="175">
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-semibold text-slate-700">Weight (kg)</label>
+                  <input type="number" name="calorie_weight_kg" min="30" max="300" step="0.1" value="{{ calorie_profile.weight_kg if calorie_profile else '' }}" class="w-full rounded-xl border border-orange-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="72">
+                </div>
+              </div>
+
+              <div>
+                <label class="mb-2 block text-sm font-semibold text-slate-700">Activity level</label>
+                <select name="calorie_activity_level" class="w-full rounded-xl border border-orange-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                  <option value="">Select</option>
+                  {% for option in calorie_activity_options %}
+                  <option value="{{ option.value }}" {% if calorie_profile and calorie_profile.activity_level == option.value %}selected{% elif not calorie_profile and option.value == 'lightly_active' %}selected{% endif %}>
+                    {{ option.label }} - {{ option.description }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="mt-8 flex items-center justify-between gap-3 border-t border-slate-200 pt-6">
+          <button type="button" id="prevStepButton" class="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">
+            Back
+          </button>
+          <button type="button" id="nextStepButton" class="rounded-full bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:bg-sky-700">
+            Continue
+          </button>
+          <button type="submit" id="submitStepButton" class="hidden rounded-full bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:bg-sky-700">
+            {{ "Save dashboard preferences" if is_editing else "Personalize my dashboard" }}
+          </button>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <section class="rounded-[2rem] bg-slate-950 p-8 text-white shadow-xl shadow-slate-300/60">
+          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-sky-300">Experience level</p>
+          <div class="mt-5 space-y-3">
+            {% for option in experience_options %}
+            <label class="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 transition">
+              <input type="radio" name="experience_level" value="{{ option.value }}" class="h-4 w-4 text-sky-400 focus:ring-sky-300" {% if experience_level == option.value %}checked{% endif %} required>
+              <span class="text-sm font-medium text-slate-100">{{ option.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="rounded-[2rem] border border-slate-200 bg-white/90 p-8 shadow-lg shadow-slate-200/60">
+          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">What changes after this?</p>
+          <ul class="mt-4 space-y-3 text-sm text-slate-600">
+            <li class="rounded-2xl bg-slate-50 px-4 py-3">You answer one focused question at a time instead of scanning a long page.</li>
+            <li class="rounded-2xl bg-slate-50 px-4 py-3">Priority trackers still move to the top of your dashboard.</li>
+            <li class="rounded-2xl bg-slate-50 px-4 py-3">If you enable calorie tracking, we collect the extra details only when they matter.</li>
+          </ul>
+        </section>
+      </aside>
+    </form>
+  </div>
+</div>
+
+<script>
+  const stepPanels = Array.from(document.querySelectorAll('.step-panel'));
+  const currentStepLabel = document.getElementById('currentStepLabel');
+  const totalStepCount = document.getElementById('totalStepCount');
+  const stepProgressBar = document.getElementById('stepProgressBar');
+  const prevStepButton = document.getElementById('prevStepButton');
+  const nextStepButton = document.getElementById('nextStepButton');
+  const submitStepButton = document.getElementById('submitStepButton');
+
+  let currentStep = 1;
+
+  function calorieTrackerSelected() {
+    return !!document.querySelector('input[name="selected_trackers"][value="calorie"]')?.checked;
+  }
+
+  function activeSteps() {
+    return stepPanels.filter((panel) => {
+      if (panel.id === 'calorieSetupSection') {
+        return calorieTrackerSelected();
+      }
+      return true;
+    });
+  }
+
+  function maxStepNumber() {
+    return activeSteps().length;
+  }
+
+  function getPanelForVisibleStep(stepNumber) {
+    return activeSteps()[stepNumber - 1];
+  }
+
+  function syncStepUI() {
+    const visiblePanels = activeSteps();
+    totalStepCount.textContent = String(visiblePanels.length);
+
+    stepPanels.forEach((panel) => panel.classList.add('hidden'));
+
+    const activePanel = getPanelForVisibleStep(currentStep);
+    if (activePanel) {
+      activePanel.classList.remove('hidden');
+    }
+
+    currentStepLabel.textContent = String(currentStep);
+    stepProgressBar.style.width = `${(currentStep / visiblePanels.length) * 100}%`;
+
+    prevStepButton.classList.toggle('invisible', currentStep === 1);
+    const lastStep = currentStep === visiblePanels.length;
+    nextStepButton.classList.toggle('hidden', lastStep);
+    submitStepButton.classList.toggle('hidden', !lastStep);
+  }
+
+  function stepIsValid(stepNumber) {
+    if (stepNumber === 1) {
+      return !!document.querySelector('input[name="primary_goal"]:checked');
+    }
+
+    if (stepNumber === 2) {
+      return document.querySelectorAll('input[name="selected_trackers"]:checked').length > 0;
+    }
+
+    if (stepNumber === 4 && calorieTrackerSelected()) {
+      const requiredNames = [
+        'calorie_goal_type',
+        'calorie_sex',
+        'calorie_age',
+        'calorie_height_cm',
+        'calorie_weight_kg',
+        'calorie_activity_level'
+      ];
+
+      return requiredNames.every((name) => {
+        const field = document.querySelector(`[name="${name}"]:checked`) || document.querySelector(`[name="${name}"]`);
+        return field && field.value && String(field.value).trim() !== '';
+      });
+    }
+
+    return true;
+  }
+
+  function advanceStep() {
+    if (!stepIsValid(currentStep)) {
+      alert('Please complete this step before continuing.');
+      return;
+    }
+
+    currentStep = Math.min(currentStep + 1, maxStepNumber());
+    syncStepUI();
+  }
+
+  function goBackStep() {
+    currentStep = Math.max(currentStep - 1, 1);
+    syncStepUI();
+  }
+
+  function handleTrackerSelectionChange() {
+    if (currentStep > maxStepNumber()) {
+      currentStep = maxStepNumber();
+    }
+    syncStepUI();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input[name="selected_trackers"]').forEach((input) => {
+      input.addEventListener('change', handleTrackerSelectionChange);
+    });
+
+    prevStepButton.addEventListener('click', goBackStep);
+    nextStepButton.addEventListener('click', advanceStep);
+
+    syncStepUI();
+  });
+</script>
+{% endblock %}

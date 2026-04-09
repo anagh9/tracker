@@ -7,7 +7,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from datetime import date
 import database
 from utils import login_required
-from services import GamificationEngine, StreakTracker, SmartInsights, BehaviorAnalysis
+from services import (
+    GamificationEngine,
+    StreakTracker,
+    SmartInsights,
+    BehaviorAnalysis,
+    PersonalizationService,
+    CalorieGoalService,
+)
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -21,21 +28,26 @@ def _aggregate_tracker_data(user_id: int, selected_date: str) -> dict:
 
     # Calorie tracker data
     try:
+        calorie_profile = CalorieGoalService.get_profile(user_id)
         calorie_entries = list(database.get_entries_by_date(user_id, selected_date))
         calorie_total = database.get_total_calories(user_id, selected_date)
         
         # Handle both integer and dict return types
         total_cals = calorie_total if isinstance(calorie_total, int) else (calorie_total.get("total", 0) if calorie_total else 0)
         
+        target_calories = calorie_profile["target_calories"] if calorie_profile else 2000
         tracker_data["calorie"] = {
             "tracked": len(calorie_entries) > 0,
             "total": total_cals,
-            "target": 2000,  # Mock target
-            "adherence": min(100, int((total_cals / 2000 * 100) if total_cals else 0)),
+            "target": target_calories,
+            "adherence": min(100, int((total_cals / target_calories * 100) if total_cals else 0)),
             "entries_count": len(calorie_entries),
             "icon": "🔥",
             "name": "Calorie Tracker",
             "url": "/calorie/",
+            "goal_type": calorie_profile["goal_type"] if calorie_profile else None,
+            "goal_label": calorie_profile["goal_label"] if calorie_profile else "Maintenance",
+            "remaining": max(0, target_calories - total_cals),
         }
     except Exception as e:
         tracker_data["calorie"] = {"tracked": False, "total": 0, "error": str(e)}
@@ -70,20 +82,22 @@ def _get_today_tracker_stats(user_id: int) -> list:
 
     # Calorie stats
     try:
+        calorie_profile = CalorieGoalService.get_profile(user_id)
         calorie_entries = list(database.get_entries_by_date(user_id, selected_date))
         calorie_total = database.get_total_calories(user_id, selected_date)
         
         # Handle both integer and dict return types
         total_cals = calorie_total if isinstance(calorie_total, int) else (calorie_total.get("total", 0) if calorie_total else 0)
         
+        target_calories = calorie_profile["target_calories"] if calorie_profile else 2000
         tracker_stats.append({
             "id": "calorie",
             "name": "Calories",
             "icon": "🔥",
             "value": total_cals,
             "unit": "kcal",
-            "target": 2000,
-            "percentage": min(100, int((total_cals / 2000 * 100) if total_cals else 0)),
+            "target": target_calories,
+            "percentage": min(100, int((total_cals / target_calories * 100) if total_cals else 0)),
             "color": "orange",
             "url": "/calorie/",
         })
@@ -115,28 +129,11 @@ def _get_today_tracker_stats(user_id: int) -> list:
 def tracker_dashboard():
     """Main unified dashboard with gamification and insights"""
     user_id = session["user_id"]
+    if PersonalizationService.needs_onboarding(user_id):
+        return redirect(url_for("onboarding.index"))
+
     user = database.get_user_by_id(user_id)
     selected_date = date.today().isoformat()
-
-    # Available trackers (extensible list)
-    available_trackers = [
-        {
-            "id": "calorie",
-            "name": "Calorie Tracker",
-            "icon": "🔥",
-            "description": "Track your daily calorie intake, get AI-powered food suggestions, and visualize your nutrition.",
-            "url": "/calorie/",
-            "color": "orange",
-        },
-        {
-            "id": "vices",
-            "name": "Habits Tracker",
-            "icon": "📉",
-            "description": "Monitor your habits and track behavior patterns with daily logging and analytics.",
-            "url": "/vices/",
-            "color": "blue",
-        }
-    ]
 
     # Aggregate tracker data
     tracker_data = _aggregate_tracker_data(user_id, selected_date)
@@ -158,15 +155,21 @@ def tracker_dashboard():
     comparison = BehaviorAnalysis.get_comparison(user_id)
 
     # Get today's tracker stats
-    today_stats = _get_today_tracker_stats(user_id)
+    dashboard_context = PersonalizationService.build_dashboard_context(
+        user_id=user_id,
+        tracker_data=tracker_data,
+        today_stats=_get_today_tracker_stats(user_id),
+    )
 
     return render_template(
         "dashboard.html",
         user=user,
         username=user["username"] if user else "User",
         is_oauth_user=session.get("auth_method") == "google",
-        available_trackers=available_trackers,
-        today_stats=today_stats,
+        available_trackers=dashboard_context["available_trackers"],
+        today_stats=dashboard_context["today_stats"],
+        onboarding_profile=dashboard_context["profile"],
+        preferences=dashboard_context["preferences"],
         daily_score=daily_score,
         streaks=streaks,
         achievements=achievements,

@@ -77,10 +77,30 @@ class SmartInsights:
 
         # Calorie-related insights
         if tracker_data.get("calorie", {}).get("tracked"):
+            calorie = tracker_data.get("calorie", {})
+            target = calorie.get("target", 0)
+            total = calorie.get("total", 0)
             insights.append({
                 "text": "You logged your meals today. Consistent tracking helps identify patterns!",
                 "type": "positive",
             })
+            if target and total:
+                delta = total - target
+                if abs(delta) <= 150:
+                    insights.append({
+                        "text": f"Your intake is close to your {calorie.get('goal_label', 'calorie')} target today.",
+                        "type": "positive",
+                    })
+                elif delta > 150:
+                    insights.append({
+                        "text": f"You're currently {delta} kcal above your target. A lighter next meal could rebalance the day.",
+                        "type": "warning",
+                    })
+                else:
+                    insights.append({
+                        "text": f"You're {abs(delta)} kcal below your target so far. Plan a nourishing meal if the day isn't over.",
+                        "type": "neutral",
+                    })
 
         # Vices-related insights
         if tracker_data.get("vices", {}).get("tracked"):
@@ -138,6 +158,15 @@ class SmartInsights:
 
         if vices_active and not calorie_active:
             recommendations.append("Add calorie tracking for complete health visibility")
+
+        calorie = tracker_data.get("calorie", {})
+        if calorie.get("target"):
+            if calorie.get("goal_type") == "fat_loss":
+                recommendations.append("Aim for filling meals with protein and fiber so your calorie deficit feels sustainable")
+            elif calorie.get("goal_type") == "muscle_gain":
+                recommendations.append("Distribute calories across meals to make your muscle-gain target easier to hit consistently")
+            else:
+                recommendations.append("Use your maintenance target as a steady reference point when planning meals")
 
         # Add motivational recommendations
         mock_recs = [

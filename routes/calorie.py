@@ -14,6 +14,7 @@ from io import BytesIO
 from openai import OpenAI
 import os
 import database
+from services import CalorieGoalService
 from utils import login_required, get_timezone, get_today_iso
 from config import Config
 
@@ -31,6 +32,9 @@ def index():
     entries = database.get_entries_by_date(user_id, selected_date)
     entries = [dict(entry) for entry in entries]
     total = database.get_total_calories(user_id, selected_date)
+    calorie_profile = CalorieGoalService.get_profile(user_id)
+    calorie_target = calorie_profile["target_calories"] if calorie_profile else 2000
+    remaining_calories = calorie_target - total
     all_dates = database.get_all_dates(user_id)
     today = date.today().isoformat()
 
@@ -42,12 +46,32 @@ def index():
         entries=entries,
         selected_date=selected_date,
         total=total,
+        calorie_profile=calorie_profile,
+        calorie_target=calorie_target,
+        remaining_calories=remaining_calories,
         all_dates=all_dates,
         today=today,
         username=user["username"] if user else "User",
         is_oauth_user=session.get("auth_method") == "google",
-        tracker_type="calorie"
+        tracker_type="calorie",
+        **CalorieGoalService.get_form_context(calorie_profile),
     )
+
+
+@calorie_bp.route("/preferences", methods=["POST"])
+@login_required
+def save_preferences():
+    """Save calorie calculator preferences and target."""
+    user_id = session["user_id"]
+    redirect_date = request.form.get("redirect_date", date.today().isoformat())
+
+    try:
+        CalorieGoalService.save_profile_from_form(user_id, request.form)
+        flash("Your calorie target has been updated.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+
+    return redirect(url_for("calorie.index", date=redirect_date))
 
 
 @calorie_bp.route("/add", methods=["POST"])

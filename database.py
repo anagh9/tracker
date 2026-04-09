@@ -3,6 +3,7 @@ Database module for Tracker App
 Handles: Users, Calorie Entries, Vices Entries
 """
 
+import json
 import sqlite3
 from datetime import date
 from config import Config
@@ -27,6 +28,40 @@ def init_db():
             email TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            user_id INTEGER PRIMARY KEY,
+            primary_goal TEXT,
+            experience_level TEXT,
+            selected_trackers TEXT NOT NULL DEFAULT '[]',
+            focus_habits TEXT NOT NULL DEFAULT '[]',
+            dashboard_preferences TEXT NOT NULL DEFAULT '{}',
+            onboarding_completed INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS calorie_profiles (
+            user_id INTEGER PRIMARY KEY,
+            goal_type TEXT NOT NULL,
+            sex TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            height_cm REAL NOT NULL,
+            weight_kg REAL NOT NULL,
+            activity_level TEXT NOT NULL,
+            activity_multiplier REAL NOT NULL,
+            bmr INTEGER NOT NULL,
+            tdee INTEGER NOT NULL,
+            target_calories INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
     """)
     
@@ -289,6 +324,150 @@ def get_user_by_email(email):
     ).fetchone()
     conn.close()
     return user
+
+
+def get_user_preferences(user_id):
+    """Get saved onboarding and dashboard preferences for a user"""
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT user_id, primary_goal, experience_level, selected_trackers,
+                  focus_habits, dashboard_preferences, onboarding_completed
+           FROM user_preferences
+           WHERE user_id = ?""",
+        (user_id,)
+    ).fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "user_id": user_id,
+            "primary_goal": None,
+            "experience_level": None,
+            "selected_trackers": [],
+            "focus_habits": [],
+            "dashboard_preferences": {},
+            "onboarding_completed": False,
+        }
+
+    return {
+        "user_id": row["user_id"],
+        "primary_goal": row["primary_goal"],
+        "experience_level": row["experience_level"],
+        "selected_trackers": json.loads(row["selected_trackers"] or "[]"),
+        "focus_habits": json.loads(row["focus_habits"] or "[]"),
+        "dashboard_preferences": json.loads(row["dashboard_preferences"] or "{}"),
+        "onboarding_completed": bool(row["onboarding_completed"]),
+    }
+
+
+def save_user_preferences(
+    user_id,
+    primary_goal,
+    experience_level,
+    selected_trackers,
+    focus_habits,
+    dashboard_preferences,
+    onboarding_completed=True,
+):
+    """Create or update a user's onboarding preferences"""
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO user_preferences (
+            user_id, primary_goal, experience_level, selected_trackers,
+            focus_habits, dashboard_preferences, onboarding_completed, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            primary_goal = excluded.primary_goal,
+            experience_level = excluded.experience_level,
+            selected_trackers = excluded.selected_trackers,
+            focus_habits = excluded.focus_habits,
+            dashboard_preferences = excluded.dashboard_preferences,
+            onboarding_completed = excluded.onboarding_completed,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (
+            user_id,
+            primary_goal,
+            experience_level,
+            json.dumps(selected_trackers),
+            json.dumps(focus_habits),
+            json.dumps(dashboard_preferences),
+            int(onboarding_completed),
+        )
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_calorie_profile(user_id):
+    """Get saved calorie profile for a user."""
+    conn = get_connection()
+    row = conn.execute(
+        """
+        SELECT user_id, goal_type, sex, age, height_cm, weight_kg, activity_level,
+               activity_multiplier, bmr, tdee, target_calories
+        FROM calorie_profiles
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def save_calorie_profile(
+    user_id,
+    goal_type,
+    sex,
+    age,
+    height_cm,
+    weight_kg,
+    activity_level,
+    activity_multiplier,
+    bmr,
+    tdee,
+    target_calories,
+):
+    """Create or update a user's calorie target profile."""
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO calorie_profiles (
+            user_id, goal_type, sex, age, height_cm, weight_kg, activity_level,
+            activity_multiplier, bmr, tdee, target_calories, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            goal_type = excluded.goal_type,
+            sex = excluded.sex,
+            age = excluded.age,
+            height_cm = excluded.height_cm,
+            weight_kg = excluded.weight_kg,
+            activity_level = excluded.activity_level,
+            activity_multiplier = excluded.activity_multiplier,
+            bmr = excluded.bmr,
+            tdee = excluded.tdee,
+            target_calories = excluded.target_calories,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (
+            user_id,
+            goal_type,
+            sex,
+            age,
+            height_cm,
+            weight_kg,
+            activity_level,
+            activity_multiplier,
+            bmr,
+            tdee,
+            target_calories,
+        ),
+    )
+    conn.commit()
+    conn.close()
 
 
 def update_user_password(user_id, password_hash):
@@ -576,4 +755,3 @@ def delete_nutrient_data(user_id, entry_date):
     )
     conn.commit()
     conn.close()
-

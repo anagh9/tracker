@@ -196,15 +196,45 @@
 
         <!-- Calorie Summary Card -->
         <div class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-xl p-6 mb-6 shadow-sm">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div>
               <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Daily Total</p>
               <p class="mono text-4xl sm:text-5xl font-bold text-orange-600">{{ total }}</p>
               <p class="text-sm text-stone-600 mt-1">kcal consumed</p>
             </div>
-            <div class="text-6xl sm:text-7xl opacity-20">🔥</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full lg:w-auto">
+              <div class="rounded-xl bg-white/70 border border-orange-200 px-4 py-3">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Target</p>
+                <p class="mono mt-1 text-2xl font-bold text-stone-900">{{ calorie_target }}</p>
+                <p class="text-xs text-stone-500">kcal/day</p>
+              </div>
+              <div class="rounded-xl bg-white/70 border border-orange-200 px-4 py-3">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Goal</p>
+                <p class="mt-1 text-lg font-bold text-stone-900">{{ calorie_profile.goal_label if calorie_profile else "Set target" }}</p>
+                <p class="text-xs text-stone-500">{{ calorie_profile.goal_summary if calorie_profile else "Save your calorie plan" }}</p>
+              </div>
+              <div class="rounded-xl bg-white/70 border border-orange-200 px-4 py-3">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Remaining</p>
+                <p class="mono mt-1 text-2xl font-bold {% if remaining_calories >= 0 %}text-emerald-600{% else %}text-red-600{% endif %}">
+                  {{ remaining_calories if remaining_calories >= 0 else ('+' ~ (remaining_calories | abs)) }}
+                </p>
+                <p class="text-xs text-stone-500">{% if remaining_calories >= 0 %}kcal left today{% else %}kcal over target{% endif %}</p>
+              </div>
+            </div>
           </div>
         </div>
+
+        {% if not calorie_profile %}
+        <div class="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-blue-900">Complete your calorie setup</p>
+            <p class="text-xs text-blue-700 mt-1">Add your goal and stats so your target, progress, and recommendations reflect you.</p>
+          </div>
+          <button onclick="openCalculatorModal()" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">
+            Set calorie target
+          </button>
+        </div>
+        {% endif %}
 
         <!-- Charts Section -->
         {% if entries %}
@@ -287,9 +317,9 @@
             <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
               <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Progress</p>
               <div class="w-full bg-stone-200 rounded-full h-2 mt-2">
-                <div class="bg-orange-500 h-2 rounded-full" style="width: {% if total > 2500 %}100{% else %}{{ (total / 2500 * 100)|int }}{% endif %}%"></div>
+                <div class="bg-orange-500 h-2 rounded-full" style="width: {% if total > calorie_target %}100{% else %}{{ (total / calorie_target * 100)|int }}{% endif %}%"></div>
               </div>
-              <p class="text-xs text-stone-500 mt-2" id="progressText">{{ total }} / 2500 kcal</p>
+              <p class="text-xs text-stone-500 mt-2" id="progressText">{{ total }} / {{ calorie_target }} kcal</p>
             </div>
           </div>
         </div>
@@ -423,19 +453,34 @@
     </div>
 
     <!-- Modal Body -->
-    <div class="p-6 space-y-4">
+    <form method="POST" action="/calorie/preferences" class="p-6 space-y-4">
+      <input type="hidden" name="redirect_date" value="{{ selected_date }}">
       <p class="text-sm text-stone-600 mb-6">Calculate your daily calorie needs based on personal information</p>
+
+      <!-- Goal Selection -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Goal</label>
+        <div class="grid gap-3 sm:grid-cols-3">
+          {% for option in calorie_goal_options %}
+          <label class="rounded-xl border border-stone-200 px-4 py-3 cursor-pointer hover:border-orange-300 transition">
+            <input type="radio" name="calorie_goal_type" value="{{ option.value }}" class="w-4 h-4 text-orange-500" {% if calorie_profile and calorie_profile.goal_type == option.value %}checked{% elif not calorie_profile and option.value == 'maintenance' %}checked{% endif %}>
+            <span class="ml-2 text-sm font-semibold text-stone-800">{{ option.label }}</span>
+            <p class="mt-1 text-xs text-stone-500">{{ option.description }}</p>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
 
       <!-- Gender Selection -->
       <div>
-        <label class="block text-sm font-semibold text-stone-700 mb-2">Gender</label>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Sex</label>
         <div class="flex gap-3">
           <label class="flex items-center cursor-pointer">
-            <input type="radio" name="gender" value="male" checked class="w-4 h-4 text-orange-500">
+            <input type="radio" name="calorie_sex" value="male" {% if calorie_profile and calorie_profile.sex == 'male' %}checked{% elif not calorie_profile %}checked{% endif %} class="w-4 h-4 text-orange-500">
             <span class="ml-2 text-sm text-stone-700">Male</span>
           </label>
           <label class="flex items-center cursor-pointer">
-            <input type="radio" name="gender" value="female" class="w-4 h-4 text-orange-500">
+            <input type="radio" name="calorie_sex" value="female" {% if calorie_profile and calorie_profile.sex == 'female' %}checked{% endif %} class="w-4 h-4 text-orange-500">
             <span class="ml-2 text-sm text-stone-700">Female</span>
           </label>
         </div>
@@ -444,60 +489,64 @@
       <!-- Age -->
       <div>
         <label class="block text-sm font-semibold text-stone-700 mb-2">Age (years)</label>
-        <input type="number" id="age" min="10" max="120" placeholder="25" 
+        <input type="number" name="calorie_age" min="18" max="100" placeholder="25" value="{{ calorie_profile.age if calorie_profile else '' }}"
           class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
       </div>
 
       <!-- Height -->
       <div>
         <label class="block text-sm font-semibold text-stone-700 mb-2">Height (cm)</label>
-        <input type="number" id="height" min="100" max="250" placeholder="175" 
+        <input type="number" name="calorie_height_cm" min="120" max="250" step="0.1" placeholder="175" value="{{ calorie_profile.height_cm if calorie_profile else '' }}"
           class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
       </div>
 
       <!-- Weight -->
       <div>
         <label class="block text-sm font-semibold text-stone-700 mb-2">Weight (kg)</label>
-        <input type="number" id="weight" min="30" max="200" step="0.1" placeholder="75" 
+        <input type="number" name="calorie_weight_kg" min="30" max="300" step="0.1" placeholder="75" value="{{ calorie_profile.weight_kg if calorie_profile else '' }}"
           class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
       </div>
 
       <!-- Activity Level -->
       <div>
         <label class="block text-sm font-semibold text-stone-700 mb-2">Activity Level</label>
-        <select id="activity" class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
-          <option value="1.2">Sedentary (little or no exercise)</option>
-          <option value="1.375" selected>Lightly active (1-3 days/week)</option>
-          <option value="1.55">Moderately active (3-5 days/week)</option>
-          <option value="1.725">Very active (6-7 days/week)</option>
-          <option value="1.9">Extremely active (physical job + training)</option>
+        <select name="calorie_activity_level" class="w-full border border-stone-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          {% for option in calorie_activity_options %}
+          <option value="{{ option.value }}" {% if calorie_profile and calorie_profile.activity_level == option.value %}selected{% elif not calorie_profile and option.value == 'lightly_active' %}selected{% endif %}>{{ option.label }} ({{ option.description }})</option>
+          {% endfor %}
         </select>
       </div>
 
       <!-- Result -->
-      <div id="resultContainer" class="hidden mt-6 p-4 bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl">
-        <p class="text-xs uppercase tracking-widest text-orange-600 font-semibold mb-2">Your Daily Need</p>
+      <div class="mt-6 p-4 bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-300 rounded-xl">
+        <p class="text-xs uppercase tracking-widest text-orange-600 font-semibold mb-2">Saved Daily Need</p>
         <div class="flex items-baseline gap-2">
-          <span class="mono text-4xl font-bold text-orange-600" id="dailyCalories">2400</span>
+          <span class="mono text-4xl font-bold text-orange-600">{% if calorie_profile %}{{ calorie_profile.target_calories }}{% else %}--{% endif %}</span>
           <span class="text-stone-600 text-sm">kcal/day</span>
         </div>
-        <p class="text-xs text-stone-600 mt-3" id="resultDetails"></p>
+        <p class="text-xs text-stone-600 mt-3">
+          {% if calorie_profile %}
+            BMR {{ calorie_profile.bmr }} kcal, maintenance {{ calorie_profile.tdee }} kcal, {{ calorie_profile.goal_summary|lower }}.
+          {% else %}
+            Save your stats to calculate a personalized target for maintenance, fat loss, or muscle gain.
+          {% endif %}
+        </p>
       </div>
 
       <!-- Buttons -->
       <div class="flex gap-3 pt-4">
-        <button onclick="calculateCalories()" 
+        <button type="submit"
           class="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 
                    text-white font-semibold py-3 px-4 rounded-xl transition shadow-sm hover:shadow-md">
-          Calculate
+          Save Goal & Calculate
         </button>
-        <button onclick="closeCalculatorModal()" 
+        <button type="button" onclick="closeCalculatorModal()" 
           class="flex-1 border border-stone-200 hover:border-stone-300 hover:bg-stone-50 
                    text-stone-700 font-semibold py-3 px-4 rounded-xl transition">
           Close
         </button>
       </div>
-    </div>
+    </form>
   </div>
 </div>
 
@@ -852,50 +901,6 @@
     document.getElementById('calculatorModal').classList.add('hidden');
     document.body.style.overflow = 'auto';
   }
-
-  // Calculate Daily Calories
-  function calculateCalories() {
-    const age = parseFloat(document.getElementById('age').value);
-    const height = parseFloat(document.getElementById('height').value);
-    const weight = parseFloat(document.getElementById('weight').value);
-    const activity = parseFloat(document.getElementById('activity').value);
-    const gender = document.querySelector('input[name="gender"]:checked').value;
-
-    if (!age || !height || !weight) {
-      alert('Please fill in all fields');
-      return;
-    }
-
-    let bmr;
-    if (gender === 'male') {
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
-    } else {
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
-    }
-
-    const tdee = Math.round(bmr * activity);
-    
-    const resultContainer = document.getElementById('resultContainer');
-    document.getElementById('dailyCalories').textContent = tdee.toLocaleString();
-    
-    const details = `<strong>Breakdown:</strong><br>
-      Base Metabolic Rate (BMR): ${Math.round(bmr)} kcal<br>
-      Activity Level: ${(activity * 100 - 100).toFixed(0)}% above BMR<br><br>
-      <strong>Recommendation:</strong><br>
-      • To maintain: ${tdee} kcal/day<br>
-      • To lose weight: ${Math.round(tdee * 0.85)} kcal/day<br>
-      • To gain weight: ${Math.round(tdee * 1.15)} kcal/day`;
-    
-    document.getElementById('resultDetails').innerHTML = details;
-    resultContainer.classList.remove('hidden');
-  }
-
-  // Keyboard shortcuts
-  document.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && !document.getElementById('calculatorModal').classList.contains('hidden')) {
-      calculateCalories();
-    }
-  });
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && !document.getElementById('calculatorModal').classList.contains('hidden')) {

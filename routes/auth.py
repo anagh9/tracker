@@ -8,10 +8,18 @@ import os
 import requests
 from urllib.parse import urlencode
 import database
+from services import PersonalizationService
 from utils import login_required
 from config import Config
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def _post_login_redirect(user_id):
+    """Route users through onboarding before showing the dashboard."""
+    if PersonalizationService.needs_onboarding(user_id):
+        return redirect(url_for("onboarding.index"))
+    return redirect(url_for("dashboard.tracker_dashboard"))
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -30,7 +38,7 @@ def login():
             session["user_id"] = user["id"]
             session["auth_method"] = "password"
             flash(f"Welcome, {username}!", "success")
-            return redirect(url_for("dashboard.tracker_dashboard"))
+            return _post_login_redirect(user["id"])
         else:
             flash("Invalid username or password.", "error")
 
@@ -107,7 +115,7 @@ def google_callback():
             session["user_id"] = user["id"]
             session["auth_method"] = "google"
             flash(f"Welcome back, {user['username']}!", "success")
-            return redirect(url_for("dashboard.tracker_dashboard"))
+            return _post_login_redirect(user["id"])
 
         # Create new user
         username = name.replace(" ", "_").lower()
@@ -126,7 +134,7 @@ def google_callback():
             session["user_id"] = user_id
             session["auth_method"] = "google"
             flash(f"Welcome, {username}! Your account has been created via Google Sign-In.", "success")
-            return redirect(url_for("dashboard.tracker_dashboard"))
+            return _post_login_redirect(user_id)
         else:
             flash("Failed to create user account.", "error")
             return redirect(url_for("auth.login"))
