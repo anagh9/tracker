@@ -23,14 +23,14 @@ def tracker_dashboard():
             "id": "calorie",
             "name": "Calorie Tracker",
             "icon": "🔥",
-            "description": "Track your daily calorie intake",
+            "description": "Track your daily calorie intake, get AI-powered food suggestions, and visualize your nutrition.",
             "url": "/calorie/",
         },
         {
             "id": "vices",
             "name": "Vices Tracker",
-            "icon": "⚠️",
-            "description": "Monitor your habits and vices",
+            "icon": "📉",
+            "description": "Monitor your habits like smoking, alcohol, and caffeine consumption with daily tracking and analytics.",
             "url": "/vices/",
         }
     ]
