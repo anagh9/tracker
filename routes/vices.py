@@ -22,6 +22,7 @@ def index():
     vice_entries = database.get_vices_by_date(user_id, selected_date)
     vice_summary = database.get_vice_summary(user_id, selected_date)
     vice_types = database.get_all_vice_types()
+    user_habits = database.get_user_habits(user_id)
     all_dates = database.get_vice_dates(user_id)
     today = date.today().isoformat()
 
@@ -33,6 +34,7 @@ def index():
         vice_entries=vice_entries,
         vice_summary=vice_summary,
         vice_types=vice_types,
+        user_habits=user_habits,
         selected_date=selected_date,
         all_dates=all_dates,
         today=today,
@@ -53,7 +55,7 @@ def add():
     notes = request.form.get("notes", "").strip()
 
     if not vice_type_id or not quantity:
-        flash("Vice type and quantity are required.", "error")
+        flash("Habit type and quantity are required.", "error")
         return redirect(url_for("vices.index", date=entry_date))
 
     try:
@@ -63,18 +65,25 @@ def add():
         if quantity <= 0:
             raise ValueError
             
-        # Verify vice type exists
+        # Check if it's a system vice type
         vice_type = database.get_vice_type_by_id(vice_type_id)
-        if not vice_type:
-            flash("Invalid vice type.", "error")
-            return redirect(url_for("vices.index", date=entry_date))
+        if vice_type:
+            database.add_vice_entry(user_id, vice_type_id=vice_type_id, quantity=quantity, entry_date=entry_date, notes=notes)
+            flash(f"Added {quantity} {vice_type['unit']} of {vice_type['name']}", "success")
+        else:
+            # Check if it's a custom user habit
+            habit = database.get_user_habit_by_id(vice_type_id, user_id)
+            if habit:
+                database.add_vice_entry(user_id, habit_id=vice_type_id, quantity=quantity, entry_date=entry_date, notes=notes)
+                flash(f"Added {quantity} {habit['unit']} of {habit['name']}", "success")
+            else:
+                flash("Invalid habit type.", "error")
+                return redirect(url_for("vices.index", date=entry_date))
             
     except ValueError:
         flash("Quantity must be a positive number.", "error")
         return redirect(url_for("vices.index", date=entry_date))
 
-    database.add_vice_entry(user_id, vice_type_id, quantity, entry_date, notes)
-    flash(f"Added {quantity} {vice_type['unit']} of {vice_type['name']}", "success")
     return redirect(url_for("vices.index", date=entry_date))
 
 
@@ -87,6 +96,45 @@ def delete(entry_id):
     database.delete_vice_entry(entry_id, user_id)
     flash("Vice entry deleted successfully.", "success")
     return redirect(url_for("vices.index", date=entry_date))
+
+
+@vices_bp.route("/habit/create", methods=["POST"])
+@login_required
+def create_habit():
+    """Create a new custom habit"""
+    user_id = session["user_id"]
+    name = request.form.get("habit_name", "").strip()
+    unit = request.form.get("habit_unit", "").strip()
+    icon = request.form.get("habit_icon", "📌").strip()
+    description = request.form.get("habit_description", "").strip()
+    color = request.form.get("habit_color", "purple").strip()
+
+    if not name or not unit:
+        flash("Habit name and unit are required.", "error")
+        return redirect(url_for("vices.index"))
+
+    try:
+        habit_id = database.create_user_habit(user_id, name, unit, icon, description, color)
+        flash(f"Habit '{name}' created successfully!", "success")
+    except Exception as e:
+        flash(f"Error creating habit: {str(e)}", "error")
+    
+    return redirect(url_for("vices.index"))
+
+
+@vices_bp.route("/habit/<int:habit_id>/delete", methods=["POST"])
+@login_required
+def delete_habit(habit_id):
+    """Delete a custom habit"""
+    user_id = session["user_id"]
+    
+    try:
+        database.delete_user_habit(habit_id, user_id)
+        flash("Habit deleted successfully.", "success")
+    except Exception as e:
+        flash(f"Error deleting habit: {str(e)}", "error")
+    
+    return redirect(url_for("vices.index"))
 
 
 @vices_bp.route("/types", methods=["GET"])

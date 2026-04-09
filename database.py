@@ -138,6 +138,107 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Run migration on startup
+def migrate_vices_table():
+    """Add habit_id column to vices table for existing databases"""
+    conn = get_connection()
+    try:
+        # Check if vices table exists
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='vices'")
+        if not cursor.fetchone():
+            conn.close()
+            return
+        
+        # Get current table schema
+        cursor = conn.execute("PRAGMA table_info(vices)")
+        columns = {row[1]: row for row in cursor.fetchall()}
+        
+        # Check if habit_id column exists
+        if 'habit_id' not in columns:
+            # Need to recreate table with new schema
+            # Step 1: Create temp table with data
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS vices_old AS SELECT * FROM vices
+            """)
+            
+            # Step 2: Drop old table
+            conn.execute("DROP TABLE vices")
+            
+            # Step 3: Create new table with correct schema
+            conn.execute("""
+                CREATE TABLE vices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    vice_type_id INTEGER,
+                    habit_id INTEGER,
+                    quantity REAL NOT NULL,
+                    entry_date TEXT NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                    FOREIGN KEY (vice_type_id) REFERENCES vice_types (id) ON DELETE CASCADE,
+                    FOREIGN KEY (habit_id) REFERENCES user_habits (id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Step 4: Copy data back (all old entries were system vices)
+            conn.execute("""
+                INSERT INTO vices (id, user_id, vice_type_id, quantity, entry_date, notes, created_at)
+                SELECT id, user_id, vice_type_id, quantity, entry_date, notes, created_at FROM vices_old
+            """)
+            
+            # Step 5: Drop temp table
+            conn.execute("DROP TABLE vices_old")
+            
+            conn.commit()
+            print("✓ Migrated: Vices table updated to support custom habits")
+        
+        # Check if vice_type_id is still NOT NULL (for older migrations)
+        elif columns['vice_type_id'][3]:  # col[3] = not_null
+            # Recreate table to make vice_type_id nullable
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS vices_old AS SELECT * FROM vices
+            """)
+            
+            conn.execute("DROP TABLE vices")
+            
+            conn.execute("""
+                CREATE TABLE vices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    vice_type_id INTEGER,
+                    habit_id INTEGER,
+                    quantity REAL NOT NULL,
+                    entry_date TEXT NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                    FOREIGN KEY (vice_type_id) REFERENCES vice_types (id) ON DELETE CASCADE,
+                    FOREIGN KEY (habit_id) REFERENCES user_habits (id) ON DELETE CASCADE
+                )
+            """)
+            
+            conn.execute("""
+                INSERT INTO vices (id, user_id, vice_type_id, quantity, entry_date, notes, created_at)
+                SELECT id, user_id, vice_type_id, quantity, entry_date, notes, created_at FROM vices_old
+            """)
+            
+            conn.execute("DROP TABLE vices_old")
+            
+            conn.commit()
+            print("✓ Migrated: vice_type_id now nullable for custom habits")
+        
+        conn.close()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        conn.close()
+        print(f"✗ Migration error: {str(e)}")
+
+migrate_vices_table()
+
 # ============= USER MANAGEMENT FUNCTIONS =============
 
 def create_user(username, email, password_hash):
