@@ -167,6 +167,16 @@ class PersonalizationService:
                 stat["highlight_reason"] = base_tracker["highlight_reason"]
                 personalized_stats.append(stat)
 
+        for stat in today_stats:
+            if stat["id"] in tracker_ids:
+                continue
+            personalized_stats.append({
+                **stat,
+                "is_priority": stat.get("is_priority", False),
+                "priority_rank": stat.get("priority_rank"),
+                "highlight_reason": stat.get("highlight_reason", "A quick read on today's momentum"),
+            })
+
         profile = {
             "goal_label": preferences["primary_goal_label"],
             "experience_level_label": preferences["experience_level_label"],

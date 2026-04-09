@@ -1,23 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
-  <!-- Navigation Bar -->
-  <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">⚡</span>
-        <span class="mono text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          HealthTrack
-        </span>
+<div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_32%),linear-gradient(180deg,_#f8fafc_0%,_#eef6ff_48%,_#f8fafc_100%)]">
+  <nav class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,_#0f172a,_#0ea5e9)] text-white shadow-lg shadow-sky-200/60">
+          <span class="text-xl">⚡</span>
+        </div>
+        <div class="min-w-0">
+          <p class="mono text-xs uppercase tracking-[0.3em] text-sky-600">HealthTrack</p>
+          <p class="text-sm text-slate-500 truncate">Personalized daily command center</p>
+        </div>
       </div>
-      <div class="flex items-center gap-4">
-        <span class="text-sm font-medium text-slate-600">{{ username }}</span>
-        <a href="/auth/logout" class="text-sm text-red-600 hover:text-red-700 font-medium transition">Logout</a>
+      <div class="flex items-center gap-3">
+        <a href="/onboarding/" class="hidden sm:inline-flex rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900">
+          Refine preferences
+        </a>
+        <div class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">
+          {{ username }}
+        </div>
+        <a href="/auth/logout" class="rounded-full bg-rose-50 px-4 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-100">
+          Logout
+        </a>
       </div>
     </div>
   </nav>
 
-  <!-- Main Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
@@ -27,295 +35,285 @@
       {% endfor %}
     {% endwith %}
 
-    <!-- Welcome Section -->
-    <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <h1 class="text-4xl font-bold text-slate-900 mb-2">Welcome back, {{ username }}!</h1>
-        <p class="text-lg text-slate-600">Your health dashboard at a glance</p>
-      </div>
-      <a href="/onboarding/" class="inline-flex items-center gap-2 self-start rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:border-slate-400 hover:text-slate-900 transition">
-        Refine preferences <span>→</span>
-      </a>
-    </div>
-
-    <div class="mb-8 grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-6">
-      <div class="rounded-3xl bg-slate-950 p-8 text-white shadow-2xl shadow-slate-300/70">
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">Dashboard profile</p>
-        <h2 class="mt-3 text-3xl font-bold">{{ onboarding_profile.goal_label }}</h2>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">{{ onboarding_profile.focus_summary }}</p>
-        <div class="mt-5 flex flex-wrap gap-2">
-          {% for focus in onboarding_profile.focus_labels %}
-          <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">{{ focus }}</span>
-          {% endfor %}
-          {% if not onboarding_profile.focus_labels %}
-          <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">Balanced setup</span>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-lg">
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Your setup</p>
-        <div class="mt-5 space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-slate-500">Experience</span>
-            <span class="text-sm font-semibold text-slate-900">{{ onboarding_profile.experience_level_label }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-slate-500">Priority tracker</span>
-            <span class="text-sm font-semibold text-slate-900">
-              {% if available_trackers and available_trackers[0] %}
-                {{ available_trackers[0].name }}
-              {% else %}
-                Personal plan
+    <section class="mb-8 grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
+      <div class="overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,_#082f49,_#0f172a_45%,_#0ea5e9)] p-8 text-white shadow-2xl shadow-sky-200/60">
+        <p class="mono text-xs uppercase tracking-[0.32em] text-sky-200">Today at a glance</p>
+        <div class="mt-4 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-2xl">
+            <h1 class="text-4xl sm:text-5xl font-bold leading-tight">A clearer view of your day, built around {{ onboarding_profile.goal_label|lower }}.</h1>
+            <p class="mt-4 text-base leading-7 text-sky-50/85">{{ onboarding_profile.focus_summary }}</p>
+            <div class="mt-5 flex flex-wrap gap-2">
+              {% for focus in onboarding_profile.focus_labels %}
+              <span class="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-50">{{ focus }}</span>
+              {% endfor %}
+              {% if not onboarding_profile.focus_labels %}
+              <span class="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-50">Balanced setup</span>
               {% endif %}
-            </span>
+            </div>
           </div>
-          <div class="rounded-2xl bg-amber-50 p-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">Adaptive ordering</p>
-            <p class="mt-2 text-sm text-amber-900">Trackers you selected during onboarding are surfaced first, with smoking and alcohol automatically boosting the habits experience.</p>
+          <div class="grid grid-cols-2 gap-3 min-w-[260px]">
+            <div class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+              <p class="text-xs uppercase tracking-[0.24em] text-sky-100">Score</p>
+              <div class="mt-2 flex items-end gap-2">
+                <span class="text-4xl font-bold">{{ daily_score.score }}</span>
+                <span class="pb-1 text-2xl">{{ daily_score.level_badge }}</span>
+              </div>
+              <p class="mt-2 text-xs text-sky-100/75">{{ daily_score.level_title }}</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+              <p class="text-xs uppercase tracking-[0.24em] text-sky-100">Streak</p>
+              <p class="mt-2 text-4xl font-bold">{{ streaks.daily_checkin }}</p>
+              <p class="mt-2 text-xs text-sky-100/75">days active</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+              <p class="text-xs uppercase tracking-[0.24em] text-sky-100">Trackers</p>
+              <p class="mt-2 text-4xl font-bold">{{ available_trackers|length }}</p>
+              <p class="mt-2 text-xs text-sky-100/75">available today</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+              <p class="text-xs uppercase tracking-[0.24em] text-sky-100">Focus</p>
+              <p class="mt-2 text-lg font-semibold">
+                {% if available_trackers and available_trackers[0] %}
+                  {{ available_trackers[0].name }}
+                {% else %}
+                  Personal plan
+                {% endif %}
+              </p>
+              <p class="mt-2 text-xs text-sky-100/75">{{ onboarding_profile.experience_level_label }}</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Gamification Score Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Daily Health Score - Large Card -->
-      <div class="lg:col-span-1 bg-gradient-to-br from-purple-500 to-blue-600 rounded-3xl shadow-xl p-8 text-white transform transition hover:scale-105">
-        <div class="flex flex-col h-full justify-between">
+      <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-7 shadow-xl shadow-slate-200/70">
+        <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="text-sm font-semibold opacity-90 mb-2">TODAY'S SCORE</h2>
-            <div class="flex items-center gap-3">
-              <div class="text-6xl font-bold">{{ daily_score.score }}</div>
-              <div class="text-4xl">{{ daily_score.level_badge }}</div>
-            </div>
+            <p class="mono text-xs uppercase tracking-[0.28em] text-slate-500">Priority actions</p>
+            <h2 class="mt-3 text-2xl font-bold text-slate-900">Quick Access</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Your most relevant trackers should be the fastest thing to reach, so navigation comes first.</p>
           </div>
-          
-          <div class="mt-6">
-            <!-- Score Message -->
-            <p class="text-sm font-medium opacity-95 mb-4">{{ daily_score.message }}</p>
-
-            <!-- Level Info -->
-            <div class="bg-white/20 rounded-lg p-3 backdrop-blur">
-              <p class="text-xs font-semibold opacity-90 mb-1">{{ daily_score.level_title }}</p>
-              <div class="w-full bg-white/30 rounded-full h-2">
-                <div class="bg-white/90 h-2 rounded-full transition-all duration-300" 
-                     style="width: {{ daily_score.progress_to_next.percentage }}%"></div>
+          <a href="/onboarding/" class="sm:hidden rounded-full border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600">
+            Edit
+          </a>
+        </div>
+        <div class="mt-6 space-y-3">
+          {% for tracker in available_trackers %}
+          <a href="{{ tracker.url }}" class="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 transition hover:-translate-y-0.5 hover:border-{{ tracker.color }}-300 hover:bg-white hover:shadow-lg">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-{{ tracker.color }}-100 text-3xl">{{ tracker.icon }}</div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-base font-semibold text-slate-900">{{ tracker.name }}</h3>
+                {% if tracker.is_priority %}
+                <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">Priority {{ tracker.priority_rank }}</span>
+                {% endif %}
               </div>
-              <p class="text-xs opacity-75 mt-1">{{ daily_score.progress_to_next.remaining }} points to next level</p>
+              <p class="mt-1 text-sm text-slate-600 line-clamp-2">{{ tracker.highlight_reason }}</p>
             </div>
-          </div>
+            <div class="text-xl font-semibold text-slate-300 transition group-hover:text-slate-500">→</div>
+          </a>
+          {% endfor %}
         </div>
       </div>
+    </section>
 
-      <!-- Today's Streaks - Stats Cards -->
-      <div class="lg:col-span-2 space-y-4">
-        <!-- Current Streak -->
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-orange-200 p-6 shadow-md hover:shadow-lg transition">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-orange-600 font-semibold">DAILY STREAK</p>
-                <p class="text-3xl font-bold text-orange-700 mt-1">{{ streaks.daily_checkin }}</p>
-                <p class="text-xs text-orange-600 mt-2">days active</p>
-              </div>
-              <div class="text-5xl">🔥</div>
-            </div>
-          </div>
-
-          <div class="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl border border-green-200 p-6 shadow-md hover:shadow-lg transition">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-green-600 font-semibold">TRACKERS ACTIVE</p>
-                <p class="text-3xl font-bold text-green-700 mt-1">{{ available_trackers|length }}</p>
-                <p class="text-xs text-green-600 mt-2">synced today</p>
-              </div>
-              <div class="text-5xl">📊</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Weekly Stats -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-md">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-900">Weekly Overview</h3>
-            <span class="text-xs font-medium text-slate-500">7 days</span>
-          </div>
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <p class="text-2xl font-bold text-blue-600">{{ weekly_overview.tracking_days }}</p>
-              <p class="text-xs text-slate-600">Days logged</p>
-            </div>
-            <div>
-              <p class="text-2xl font-bold text-purple-600">{{ weekly_overview.total_entries }}</p>
-              <p class="text-xs text-slate-600">Total entries</p>
-            </div>
-            <div>
-              <p class="text-2xl font-bold text-emerald-600">{{ weekly_overview.average_daily_score }}</p>
-              <p class="text-xs text-slate-600">Avg score</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Today's Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <section class="mb-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       {% for stat in today_stats %}
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition p-6">
-        <div class="flex items-center justify-between mb-4">
+      <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50 transition hover:-translate-y-1 hover:shadow-xl">
+        <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900">{{ stat.name }}</h3>
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{{ stat.name }}</p>
             {% if stat.is_priority %}
-            <p class="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-amber-600">Priority tracker {{ stat.priority_rank }}</p>
+            <p class="mt-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-600">Priority tracker {{ stat.priority_rank }}</p>
             {% endif %}
           </div>
-          <span class="text-4xl">{{ stat.icon }}</span>
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-{{ stat.color }}-100 text-2xl">{{ stat.icon }}</div>
         </div>
-
-        <!-- Stats Display -->
-        <div class="mb-4">
-          <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-{{ stat.color }}-600">{{ stat.value }}</span>
-            <span class="text-sm text-slate-600">/ {{ stat.target }} {{ stat.unit }}</span>
+        <div class="mt-6 flex items-end gap-2">
+          <span class="text-4xl font-bold text-slate-900">{{ stat.value }}</span>
+          <span class="pb-1 text-sm text-slate-500">/ {{ stat.target }} {{ stat.unit }}</span>
+        </div>
+        <div class="mt-5">
+          <div class="h-2.5 w-full rounded-full bg-slate-200">
+            <div class="h-2.5 rounded-full bg-{{ stat.color }}-500 transition-all duration-300" style="width: {{ stat.percentage }}%"></div>
+          </div>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <p class="text-xs text-slate-500">{{ stat.highlight_reason }}</p>
+            <p class="text-xs font-semibold text-slate-700">{{ stat.percentage }}%</p>
           </div>
         </div>
-
-        <!-- Progress Bar -->
-        <div class="mb-4">
-          <div class="w-full bg-slate-200 rounded-full h-2.5">
-            <div class="bg-{{ stat.color }}-500 h-2.5 rounded-full transition-all" 
-                 style="width: {{ stat.percentage }}%"></div>
-          </div>
-          <p class="text-xs text-slate-600 mt-2">{{ stat.percentage }}% of daily target</p>
-          <p class="text-xs text-slate-500 mt-1">{{ stat.highlight_reason }}</p>
-        </div>
-
-        <!-- View Tracker Link -->
-        <a href="{{ stat.url }}" class="inline-flex items-center gap-2 text-sm font-medium text-{{ stat.color }}-600 hover:text-{{ stat.color }}-700 transition">
-          View Details <span>→</span>
-        </a>
       </div>
       {% endfor %}
-    </div>
+    </section>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Smart Insights Section -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Primary Insight -->
-        <div class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl shadow-md p-8">
-          <div class="flex gap-4">
-            <div class="text-5xl">{{ daily_insights.primary_insight.icon }}</div>
+    <section class="mb-8 grid grid-cols-1 xl:grid-cols-[1.25fr_0.75fr] gap-6">
+      <div class="space-y-6">
+        <div class="rounded-[2rem] border border-indigo-200 bg-[linear-gradient(135deg,_#eef2ff,_#e0f2fe)] p-8 shadow-xl shadow-indigo-100/70">
+          <p class="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-500">Primary insight</p>
+          <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/70 text-4xl shadow-sm">{{ daily_insights.primary_insight.icon }}</div>
             <div>
-              <h3 class="text-lg font-bold text-indigo-900 mb-2">{{ daily_insights.primary_insight.title }}</h3>
-              <p class="text-slate-700 leading-relaxed">{{ daily_insights.primary_insight.description }}</p>
+              <h2 class="text-2xl font-bold text-slate-900">{{ daily_insights.primary_insight.title }}</h2>
+              <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-700">{{ daily_insights.primary_insight.description }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Insights List & Trend -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <!-- Left: Key Insights -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
-            <h3 class="font-bold text-slate-900 mb-4 text-lg">Key Insights</h3>
-            <div class="space-y-3">
+        <div class="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-6">
+          <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Performance</p>
+                <h3 class="mt-2 text-xl font-bold text-slate-900">Score & weekly view</h3>
+              </div>
+              <div class="rounded-2xl bg-slate-950 px-4 py-3 text-white">
+                <div class="flex items-end gap-2">
+                  <span class="text-4xl font-bold">{{ daily_score.score }}</span>
+                  <span class="pb-1 text-xl">{{ daily_score.level_badge }}</span>
+                </div>
+              </div>
+            </div>
+            <p class="mt-4 text-sm text-slate-600">{{ daily_score.message }}</p>
+            <div class="mt-5 rounded-2xl bg-slate-50 p-4">
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm font-semibold text-slate-700">{{ daily_score.level_title }}</span>
+                <span class="text-xs text-slate-500">{{ daily_score.progress_to_next.remaining }} points to next</span>
+              </div>
+              <div class="mt-3 h-2.5 rounded-full bg-slate-200">
+                <div class="h-2.5 rounded-full bg-[linear-gradient(90deg,_#0ea5e9,_#2563eb)]" style="width: {{ daily_score.progress_to_next.percentage }}%"></div>
+              </div>
+            </div>
+            <div class="mt-6 grid grid-cols-3 gap-4">
+              <div class="rounded-2xl border border-slate-200 p-4">
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-500">Days logged</p>
+                <p class="mt-2 text-3xl font-bold text-slate-900">{{ weekly_overview.tracking_days }}</p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 p-4">
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-500">Entries</p>
+                <p class="mt-2 text-3xl font-bold text-slate-900">{{ weekly_overview.total_entries }}</p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 p-4">
+                <p class="text-xs uppercase tracking-[0.22em] text-slate-500">Avg score</p>
+                <p class="mt-2 text-3xl font-bold text-slate-900">{{ weekly_overview.average_daily_score }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50">
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Behavior</p>
+              <div class="mt-3 flex items-center gap-4">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-3xl">{{ behavior_summary.discipline_rating_icon }}</div>
+                <div>
+                  <h3 class="text-xl font-bold text-slate-900">{{ behavior_summary.discipline_rating }}</h3>
+                  <p class="text-sm text-slate-500">Overall discipline rating</p>
+                </div>
+              </div>
+              <div class="mt-5 grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-blue-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.2em] text-blue-600">Consistency</p>
+                  <p class="mt-2 text-3xl font-bold text-blue-700">{{ behavior_summary.consistency_score }}%</p>
+                </div>
+                <div class="rounded-2xl bg-purple-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.2em] text-purple-600">Adherence</p>
+                  <p class="mt-2 text-3xl font-bold text-purple-700">{{ behavior_summary.habit_adherence }}%</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-[2rem] border border-green-200 bg-[linear-gradient(135deg,_#ecfdf5,_#f0fdf4)] p-6 shadow-lg shadow-green-100/70">
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-green-600">Trend snapshot</p>
+              <div class="mt-4 flex items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm text-slate-600">{{ daily_insights.trend.metric }}</p>
+                  <p class="mt-2 text-3xl font-bold {% if daily_insights.trend.direction == 'down' %}text-red-600{% elif daily_insights.trend.direction == 'up' %}text-green-700{% else %}text-slate-700{% endif %}">
+                    {% if daily_insights.trend.direction == "up" %}+{% endif %}{{ daily_insights.trend.percentage }}{% if daily_insights.trend.direction != "stable" %}%{% endif %}
+                    {% if daily_insights.trend.direction == "stable" %}Stable{% endif %}
+                  </p>
+                </div>
+                <div class="text-4xl">
+                  {% if daily_insights.trend.direction == "up" %}📈{% elif daily_insights.trend.direction == "down" %}📉{% else %}➡️{% endif %}
+                </div>
+              </div>
+              <div class="mt-5 border-t border-green-200 pt-4">
+                <p class="text-sm text-slate-600">This week vs last</p>
+                <p class="mt-2 text-lg font-semibold text-slate-900">{{ comparison.this_week_vs_last.label }}</p>
+                <p class="mt-1 text-sm {% if comparison.this_week_vs_last.direction == 'up' %}text-green-700{% else %}text-red-600{% endif %}">
+                  {{ comparison.this_week_vs_last.percentage }}% and {{ comparison.discipline_trend|lower }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50">
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Key insights</p>
+            <div class="mt-4 space-y-3">
               {% for insight in daily_insights.insights_list %}
-              <div class="flex gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-                <div class="flex-shrink-0 mt-0.5">
+              <div class="flex gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div class="mt-0.5 text-lg">
                   {% if insight.type == "positive" %}
-                    <span class="text-lg">✨</span>
+                    ✨
                   {% elif insight.type == "warning" %}
-                    <span class="text-lg">⚠️</span>
+                    ⚠️
                   {% else %}
-                    <span class="text-lg">💡</span>
+                    💡
                   {% endif %}
                 </div>
-                <p class="text-sm text-slate-700">{{ insight.text }}</p>
+                <p class="text-sm leading-6 text-slate-700">{{ insight.text }}</p>
               </div>
               {% endfor %}
             </div>
           </div>
 
-          <!-- Right: Behavior & Trend -->
-          <div class="space-y-4">
-            <!-- Behavior Summary -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
-              <h3 class="font-bold text-slate-900 mb-3">Discipline Rating</h3>
-              <div class="flex items-center gap-3 mb-4">
-                <span class="text-4xl">{{ behavior_summary.discipline_rating_icon }}</span>
+          <div class="overflow-hidden rounded-[2rem] border border-cyan-200 bg-[linear-gradient(145deg,_#f8fdff,_#ecfeff_45%,_#f0f9ff)] shadow-lg shadow-cyan-100/70">
+            <div class="border-b border-cyan-100/80 px-6 py-5">
+              <div class="flex items-start justify-between gap-4">
                 <div>
-                  <p class="text-sm text-slate-600">Overall</p>
-                  <p class="text-xl font-bold text-slate-900">{{ behavior_summary.discipline_rating }}</p>
+                  <p class="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Recommendations</p>
+                  <h3 class="mt-2 text-xl font-bold text-slate-900">Next best moves for today</h3>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">Small actions, sequenced clearly, so you always know what to do next.</p>
                 </div>
-              </div>
-              <div class="flex gap-2 flex-wrap">
-                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                  📊 {{ behavior_summary.consistency_score }}% Consistent
-                </span>
-                <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                  🎯 {{ behavior_summary.habit_adherence }}% Adherence
-                </span>
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 text-3xl shadow-sm">🗺️</div>
               </div>
             </div>
-
-            <!-- Trend -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
-              <h3 class="font-bold text-slate-900 mb-3">Trend</h3>
-              <div class="flex items-center gap-3">
-                {% if daily_insights.trend.direction == "up" %}
-                  <span class="text-3xl">📈</span>
-                  <div>
-                    <p class="text-sm text-slate-600">{{ daily_insights.trend.metric }}</p>
-                    <p class="text-lg font-bold text-green-600">+{{ daily_insights.trend.percentage }}%</p>
+            <div class="px-6 py-6">
+              <div class="grid gap-4">
+                {% for rec in daily_insights.recommendations %}
+                <div class="group rounded-3xl border border-cyan-100 bg-white/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-white hover:shadow-md">
+                  <div class="flex gap-4">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-100 text-sm font-bold text-cyan-700">
+                      {{ loop.index }}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white">Action</span>
+                        {% if loop.first %}
+                        <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-700">Start here</span>
+                        {% endif %}
+                      </div>
+                      <p class="mt-3 text-sm leading-6 text-slate-700">{{ rec }}</p>
+                    </div>
                   </div>
-                {% elif daily_insights.trend.direction == "down" %}
-                  <span class="text-3xl">📉</span>
-                  <div>
-                    <p class="text-sm text-slate-600">{{ daily_insights.trend.metric }}</p>
-                    <p class="text-lg font-bold text-red-600">{{ daily_insights.trend.percentage }}%</p>
-                  </div>
-                {% else %}
-                  <span class="text-3xl">➡️</span>
-                  <div>
-                    <p class="text-sm text-slate-600">{{ daily_insights.trend.metric }}</p>
-                    <p class="text-lg font-bold text-slate-600">Stable</p>
-                  </div>
-                {% endif %}
+                </div>
+                {% endfor %}
               </div>
             </div>
           </div>
         </div>
-
-        <!-- Recommendations -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
-          <h3 class="font-bold text-slate-900 mb-4 text-lg">Recommendations</h3>
-          <ul class="space-y-3">
-            {% for rec in daily_insights.recommendations %}
-            <li class="flex gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <span class="text-lg flex-shrink-0">💡</span>
-              <span class="text-sm text-slate-700">{{ rec }}</span>
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
       </div>
 
-      <!-- Sidebar: Achievements & Strengths -->
-      <div class="space-y-6">
-        <!-- Achievements -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
-          <h3 class="font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <span>🏆</span> Achievements
-          </h3>
-          <div class="space-y-3">
+      <aside class="space-y-6">
+        <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Achievements</p>
+          <div class="mt-4 space-y-3">
             {% for achievement in achievements %}
-            <div class="p-3 rounded-lg {% if achievement.unlocked %}bg-yellow-50 border border-yellow-200{% else %}bg-slate-50 border border-slate-200 opacity-60{% endif %}">
-              <div class="flex items-start gap-2">
-                <span class="text-2xl flex-shrink-0">{{ achievement.badge }}</span>
+            <div class="rounded-2xl border p-4 {% if achievement.unlocked %}border-amber-200 bg-amber-50{% else %}border-slate-200 bg-slate-50 opacity-70{% endif %}">
+              <div class="flex items-start gap-3">
+                <div class="text-2xl">{{ achievement.badge }}</div>
                 <div>
-                  <p class="font-semibold text-sm text-slate-900">{{ achievement.title }}</p>
-                  <p class="text-xs text-slate-600">{{ achievement.description }}</p>
+                  <p class="text-sm font-semibold text-slate-900">{{ achievement.title }}</p>
+                  <p class="mt-1 text-xs leading-5 text-slate-600">{{ achievement.description }}</p>
                 </div>
               </div>
             </div>
@@ -323,104 +321,104 @@
           </div>
         </div>
 
-        <!-- Strengths & Areas to Improve -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
-          <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <span>💪</span> Strengths
-          </h3>
-          <ul class="space-y-2 mb-4">
-            {% for strength in behavior_summary.key_strengths %}
-            <li class="flex items-center gap-2 text-sm text-slate-700">
-              <span>✅</span> {{ strength }}
-            </li>
-            {% endfor %}
-          </ul>
-
-          <h3 class="font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <span>🎯</span> Focus Areas
-          </h3>
-          <ul class="space-y-2">
-            {% for area in behavior_summary.areas_to_improve %}
-            <li class="flex items-center gap-2 text-sm text-slate-700">
-              <span>→</span> {{ area }}
-            </li>
-            {% endfor %}
-          </ul>
-        </div>
-
-        <!-- Comparison -->
-        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 shadow-md p-6">
-          <h3 class="font-bold text-slate-900 mb-4">Progress</h3>
-          <div class="space-y-3">
-            <div>
-              <p class="text-sm text-slate-600 mb-1">This week</p>
-              <div class="flex items-center gap-2">
-                <span class="text-2xl">
-                  {% if comparison.this_week_vs_last.direction == "up" %}📈{% else %}📉{% endif %}
-                </span>
-                <span class="font-bold text-lg {% if comparison.this_week_vs_last.direction == 'up' %}text-green-600{% else %}text-red-600{% endif %}">
-                  {{ comparison.this_week_vs_last.percentage }}%
-                </span>
+        <div class="overflow-hidden rounded-[2rem] border border-sky-200 bg-[linear-gradient(160deg,_#f8fcff,_#eff6ff_48%,_#ecfeff)] shadow-lg shadow-sky-100/80">
+          <div class="border-b border-sky-100/90 px-6 py-5">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Gamification</p>
+                <h3 class="mt-2 text-xl font-bold text-slate-900">Momentum this week</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">A quick read on your score, streak, and consistency so the sidebar carries more of your progress story.</p>
               </div>
-              <p class="text-xs text-slate-600">{{ comparison.this_week_vs_last.label }}</p>
+              <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 text-3xl shadow-sm">🎮</div>
             </div>
-            <div class="pt-3 border-t border-green-200">
-              <p class="text-sm text-slate-600 mb-1">Trend</p>
-              <p class="font-bold text-green-700">{{ comparison.discipline_trend }} 📈</p>
+          </div>
+          <div class="px-6 py-6">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-slate-950 px-4 py-4 text-white">
+                <p class="text-xs uppercase tracking-[0.22em] text-sky-100">Daily score</p>
+                <div class="mt-2 flex items-end gap-2">
+                  <span class="text-3xl font-bold">{{ daily_score.score }}</span>
+                  <span class="pb-0.5 text-lg">{{ daily_score.level_badge }}</span>
+                </div>
+                <p class="mt-1 text-xs text-sky-100/75">{{ daily_score.level_title }}</p>
+              </div>
+              <div class="rounded-2xl bg-amber-50 px-4 py-4">
+                <p class="text-xs uppercase tracking-[0.22em] text-amber-700">Current streak</p>
+                <p class="mt-2 text-3xl font-bold text-amber-900">{{ streaks.daily_checkin }}</p>
+                <p class="mt-1 text-xs text-amber-800/80">days in a row</p>
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-2xl border border-sky-100 bg-white/80 p-4">
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-sm font-semibold text-slate-800">Level progress</span>
+                <span class="text-xs text-slate-500">{{ daily_score.progress_to_next.remaining }} pts to next</span>
+              </div>
+              <div class="mt-3 h-2.5 rounded-full bg-slate-200">
+                <div class="h-2.5 rounded-full bg-[linear-gradient(90deg,_#0ea5e9,_#22c55e)]" style="width: {{ daily_score.progress_to_next.percentage }}%"></div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-3 gap-3">
+              <div class="rounded-2xl border border-white/80 bg-white/70 p-3">
+                <p class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Days</p>
+                <p class="mt-2 text-2xl font-bold text-slate-900">{{ weekly_overview.tracking_days }}</p>
+              </div>
+              <div class="rounded-2xl border border-white/80 bg-white/70 p-3">
+                <p class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Entries</p>
+                <p class="mt-2 text-2xl font-bold text-slate-900">{{ weekly_overview.total_entries }}</p>
+              </div>
+              <div class="rounded-2xl border border-white/80 bg-white/70 p-3">
+                <p class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Avg</p>
+                <p class="mt-2 text-2xl font-bold text-slate-900">{{ weekly_overview.average_daily_score }}</p>
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-2xl bg-emerald-50 px-4 py-4">
+              <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Weekly pulse</p>
+              <p class="mt-2 text-sm leading-6 text-slate-700">
+                {{ comparison.this_week_vs_last.percentage }}% {{ comparison.this_week_vs_last.direction }} week over week and {{ comparison.discipline_trend|lower }}.
+              </p>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Quick Access Tracker Cards -->
-    <div class="mb-8">
-      <h2 class="text-2xl font-bold text-slate-900 mb-6">Quick Access</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {% for tracker in available_trackers %}
-        <a href="{{ tracker.url }}" class="group">
-          <div class="bg-white rounded-2xl border-2 border-{{ tracker.color }}-200 hover:border-{{ tracker.color }}-400 hover:shadow-xl transition p-8 h-full">
-            <div class="mb-4 flex items-start justify-between gap-4">
-              <div class="text-5xl">{{ tracker.icon }}</div>
-              {% if tracker.is_priority %}
-              <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-                Priority {{ tracker.priority_rank }}
-              </span>
-              {% endif %}
-            </div>
-            <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ tracker.name }}</h3>
-            <p class="text-slate-600 mb-6">{{ tracker.description }}</p>
-            <p class="mb-6 text-xs font-medium uppercase tracking-[0.22em] text-{{ tracker.color }}-600">{{ tracker.highlight_reason }}</p>
-            <div class="flex items-center text-{{ tracker.color }}-600 font-semibold group-hover:gap-2 transition-all">
-              <span>Open Tracker</span>
-              <span class="text-xl">→</span>
-            </div>
-          </div>
-        </a>
-        {% endfor %}
-      </div>
-    </div>
+        <div class="rounded-[2rem] border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Strengths</p>
+          <ul class="mt-4 space-y-3">
+            {% for strength in behavior_summary.key_strengths %}
+            <li class="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <span>✅</span>
+              <span>{{ strength }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+
+          <p class="mt-6 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Focus areas</p>
+          <ul class="mt-4 space-y-3">
+            {% for area in behavior_summary.areas_to_improve %}
+            <li class="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span>→</span>
+              <span>{{ area }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </aside>
+    </section>
   </div>
 </div>
 
 <style>
-  /* Gradient Text Utility */
-  .bg-gradient-to-r {
-    background: linear-gradient(to right, var(--tw-gradient-stops));
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .bg-clip-text {
     background-clip: text;
   }
-
-  .text-transparent {
-    color: transparent;
-  }
-
-  /* Smooth transitions */
-  * {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
 </style>
-
 {% endblock %}

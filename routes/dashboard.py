@@ -79,6 +79,7 @@ def _get_today_tracker_stats(user_id: int) -> list:
     """
     selected_date = date.today().isoformat()
     tracker_stats = []
+    tracker_data = _aggregate_tracker_data(user_id, selected_date)
 
     # Calorie stats
     try:
@@ -117,6 +118,44 @@ def _get_today_tracker_stats(user_id: int) -> list:
             "percentage": min(100, int((len(vice_entries) / 3 * 100))),
             "color": "blue",
             "url": "/vices/",
+        })
+    except:
+        pass
+
+    # Daily score summary
+    try:
+        daily_score = GamificationEngine.calculate_daily_score(tracker_data)
+        tracker_stats.append({
+            "id": "daily_score",
+            "name": "Daily Score",
+            "icon": "⚡",
+            "value": daily_score["score"],
+            "unit": "pts",
+            "target": 100,
+            "percentage": min(100, daily_score["score"]),
+            "color": "sky",
+            "url": "/",
+            "highlight_reason": daily_score["level_title"],
+        })
+    except:
+        pass
+
+    # Tracker coverage summary
+    try:
+        active_trackers = sum(1 for snapshot in tracker_data.values() if isinstance(snapshot, dict) and snapshot.get("tracked"))
+        total_trackers = len([snapshot for snapshot in tracker_data.values() if isinstance(snapshot, dict)])
+        coverage_percentage = int((active_trackers / total_trackers) * 100) if total_trackers else 0
+        tracker_stats.append({
+            "id": "tracker_coverage",
+            "name": "Trackers Active",
+            "icon": "🧭",
+            "value": active_trackers,
+            "unit": "trackers",
+            "target": total_trackers or 1,
+            "percentage": min(100, coverage_percentage),
+            "color": "emerald",
+            "url": "/",
+            "highlight_reason": "How many trackers you updated today",
         })
     except:
         pass
