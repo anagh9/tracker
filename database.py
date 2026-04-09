@@ -54,18 +54,36 @@ def init_db():
         )
     """)
     
+    # User custom habits table (user-specific habit types)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS user_habits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            unit TEXT NOT NULL,
+            icon TEXT DEFAULT '📌',
+            description TEXT,
+            color TEXT DEFAULT 'purple',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, name),
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+    """)
+    
     # Vices entries table (user's vice tracking)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS vices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
-            vice_type_id INTEGER NOT NULL,
+            vice_type_id INTEGER,
+            habit_id INTEGER,
             quantity REAL NOT NULL,
             entry_date TEXT NOT NULL,
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-            FOREIGN KEY (vice_type_id) REFERENCES vice_types (id) ON DELETE CASCADE
+            FOREIGN KEY (vice_type_id) REFERENCES vice_types (id) ON DELETE CASCADE,
+            FOREIGN KEY (habit_id) REFERENCES user_habits (id) ON DELETE CASCADE
         )
     """)
 
@@ -265,24 +283,28 @@ def get_vice_type_by_name(name):
 
 # ============= VICE ENTRIES FUNCTIONS =============
 
-def add_vice_entry(user_id, vice_type_id, quantity, entry_date, notes=""):
-    """Add a vice entry"""
+def add_vice_entry(user_id, vice_type_id=None, quantity=None, entry_date=None, notes="", habit_id=None):
+    """Add a vice entry (supports both system vice_types and custom user_habits)"""
     conn = get_connection()
     conn.execute(
-        """INSERT INTO vices (user_id, vice_type_id, quantity, entry_date, notes)
-           VALUES (?, ?, ?, ?, ?)""",
-        (user_id, vice_type_id, quantity, entry_date, notes)
+        """INSERT INTO vices (user_id, vice_type_id, habit_id, quantity, entry_date, notes)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (user_id, vice_type_id, habit_id, quantity, entry_date, notes)
     )
     conn.commit()
     conn.close()
 
 def get_vices_by_date(user_id, entry_date):
-    """Get vice entries for a specific date"""
+    """Get vice entries for a specific date (includes both system and custom habits)"""
     conn = get_connection()
     rows = conn.execute(
-        """SELECT v.*, vt.name, vt.unit, vt.icon 
+        """SELECT v.*, 
+                  COALESCE(vt.name, uh.name) as name,
+                  COALESCE(vt.unit, uh.unit) as unit,
+                  COALESCE(vt.icon, uh.icon) as icon
            FROM vices v
-           JOIN vice_types vt ON v.vice_type_id = vt.id
+           LEFT JOIN vice_types vt ON v.vice_type_id = vt.id
+           LEFT JOIN user_habits uh ON v.habit_id = uh.id
            WHERE v.user_id = ? AND v.entry_date = ?
            ORDER BY v.created_at DESC""",
         (user_id, entry_date)
@@ -311,9 +333,10 @@ def get_vice_dates(user_id):
     return [row["entry_date"] for row in rows]
 
 def get_vice_summary(user_id, entry_date):
-    """Get summary of vices for a date"""
+    """Get summary of habits (system and custom) for a date"""
     conn = get_connection()
-    rows = conn.execute(
+    # Get system vice types summary
+    vice_rows = conn.execute(
         """SELECT vt.name, vt.unit, vt.icon, SUM(v.quantity) as total_quantity, COUNT(*) as count
            FROM vices v
            JOIN vice_types vt ON v.vice_type_id = vt.id
@@ -322,8 +345,95 @@ def get_vice_summary(user_id, entry_date):
            ORDER BY vt.name""",
         (user_id, entry_date)
     ).fetchall()
+    
+    # Get custom habits summary
+    habit_rows = conn.execute(
+        """SELECT uh.name, uh.unit, uh.icon, SUM(v.quantity) as total_quantity, COUNT(*) as count
+           FROM vices v
+           JOIN user_habits uh ON v.habit_id = uh.id
+           WHERE v.user_id = ? AND v.entry_date = ?
+           GROUP BY v.habit_id
+           ORDER BY uh.name""",
+        (user_id, entry_date)
+    ).fetchall()
+    
+    conn.close()
+    all_rows = [dict(row) for row in vice_rows] + [dict(row) for row in habit_rows]
+    return sorted(all_rows, key=lambda x: x['name'])
+
+# ============= USER HABITS FUNCTIONS =============
+
+def create_user_habit(user_id, name, unit, icon="📌", description="", color="purple"):
+    """Create a new custom habit for user"""
+    conn = get_connection()
+    try:
+        cursor = conn.execute(
+            """INSERT INTO user_habits (user_id, name, unit, icon, description, color)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, name.lower().strip(), unit.strip(), icon, description, color)
+        )
+        conn.commit()
+        habit_id = cursor.lastrowid
+        conn.close()
+        return habit_id
+    except Exception as e:
+        conn.close()
+        raise e
+
+def get_user_habits(user_id):
+    """Get all custom habits for a user"""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT * FROM user_habits WHERE user_id = ? ORDER BY created_at DESC""",
+        (user_id,)
+    ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+def get_user_habit_by_id(habit_id, user_id):
+    """Get a specific user habit"""
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT * FROM user_habits WHERE id = ? AND user_id = ?""",
+        (habit_id, user_id)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def delete_user_habit(habit_id, user_id):
+    """Delete a user habit and all associated entries"""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """DELETE FROM user_habits WHERE id = ? AND user_id = ?""",
+            (habit_id, user_id)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.close()
+        raise e
+
+def get_all_available_habits(user_id):
+    """Get all available habits (system default + user custom)"""
+    conn = get_connection()
+    
+    # Get system default habits (vice_types)
+    default_habits = conn.execute(
+        """SELECT id, name, unit, icon, 'system' as type FROM vice_types"""
+    ).fetchall()
+    
+    # Get user custom habits
+    custom_habits = conn.execute(
+        """SELECT id, name, unit, icon, 'custom' as type FROM user_habits WHERE user_id = ?""",
+        (user_id,)
+    ).fetchall()
+    
+    conn.close()
+    
+    result = [dict(row) for row in default_habits] + [dict(row) for row in custom_habits]
+    return result
 
 # ============= NUTRIENT DATA FUNCTIONS =============
 
