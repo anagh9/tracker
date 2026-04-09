@@ -27,31 +27,21 @@
 
     <!-- Tracker Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-      <!-- Calorie Tracker Card -->
-      <a href="/calorie/" class="group">
-        <div class="bg-white rounded-2xl border-2 border-orange-200 hover:border-orange-400 hover:shadow-2xl transition p-8 h-full">
-          <div class="text-6xl mb-4">🔥</div>
-          <h2 class="text-3xl font-bold text-stone-900 mb-2">Calorie Tracker</h2>
-          <p class="text-stone-600 mb-6">Track your daily calorie intake, get AI-powered food suggestions, and visualize your nutrition.</p>
-          <div class="flex items-center text-orange-600 font-semibold group-hover:gap-2 transition-all">
+      {% for tracker in available_trackers %}
+      <!-- {{ tracker.name }} Card -->
+      <a href="{{ tracker.url }}" class="group">
+        <div class="bg-white rounded-2xl border-2 border-{{ tracker.id }}-200 hover:border-{{ tracker.id }}-400 hover:shadow-2xl transition p-8 h-full">
+          <div class="text-4xl mb-4">{{ tracker.icon }}</div>
+          <h2 class="text-3xl font-bold text-stone-900 mb-2">{{ tracker.name }}</h2>
+          <p class="text-stone-600 mb-6">{{ tracker.description }}</p>
+          <div class="flex items-center text-{{ tracker.id }}-600 font-semibold group-hover:gap-2 transition-all">
             <span>Get Started</span>
             <span class="text-xl">→</span>
           </div>
         </div>
       </a>
+      {% endfor %}
 
-      <!-- Vices Tracker Card -->
-      <a href="/vices/" class="group">
-        <div class="bg-white rounded-2xl border-2 border-purple-200 hover:border-purple-400 hover:shadow-2xl transition p-8 h-full">
-          <div class="text-6xl mb-4">⚠️</div>
-          <h2 class="text-3xl font-bold text-stone-900 mb-2">Vices Tracker</h2>
-          <p class="text-stone-600 mb-6">Monitor your habits like smoking, alcohol, and caffeine consumption with daily tracking and analytics.</p>
-          <div class="flex items-center text-purple-600 font-semibold group-hover:gap-2 transition-all">
-            <span>Get Started</span>
-            <span class="text-xl">→</span>
-          </div>
-        </div>
-      </a>
     </div>
 
     <!-- Features Section -->

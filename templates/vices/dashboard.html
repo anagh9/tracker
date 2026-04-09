@@ -1,103 +1,472 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="min-h-screen bg-stone-50">
-  <!-- Main Container -->
-  <div class="max-w-7xl mx-auto px-4 py-8">
+
+<div id="dashContainer" class="flex h-screen bg-stone-50 overflow-hidden">
+
+  <!-- Sidebar Overlay (Mobile) -->
+  <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="closeSidebar()"></div>
+
+  <!-- LEFT SIDEBAR NAVIGATION -->
+  <aside id="sidebar" class="w-64 bg-white border-r border-stone-200 shadow-sm flex flex-col fixed lg:static lg:w-64 h-full -left-64 lg:left-0 transition-all duration-300 z-40">
     
-    <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-4xl font-bold text-stone-900">⚠️ Vices Tracker</h1>
-      <p class="text-stone-600 mt-2">Track your daily habits and monitor progress</p>
-    </div>
+    <!-- Close Button (Mobile) -->
+    <button onclick="closeSidebar()" class="absolute top-4 right-4 lg:hidden p-2 hover:bg-stone-100 rounded-lg transition">
+      <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
 
-    <!-- Tracker Selection -->
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-      <a href="/calorie/" class="p-4 bg-white rounded-lg border border-stone-200 hover:shadow-md transition text-center">
-        <span class="text-3xl block mb-2">🔥</span>
-        <span class="text-sm font-semibold text-stone-900">Calorie Tracker</span>
-      </a>
-      <div class="p-4 bg-purple-50 rounded-lg border-2 border-purple-300 text-center">
-        <span class="text-3xl block mb-2">⚠️</span>
-        <span class="text-sm font-semibold text-stone-900">Vices Tracker</span>
-        <span class="text-xs text-purple-600 mt-1 block">Currently Viewing</span>
+    <!-- Logo Section -->
+    <div class="px-6 py-6 border-b border-stone-200">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">⚠️</span>
+        <span class="mono text-lg font-bold text-stone-900">
+          Habits<span class="text-purple-500">Hub</span>
+        </span>
       </div>
+      <p class="text-xs text-stone-400 mt-1">habit tracker</p>
     </div>
 
-    <!-- Date Selector -->
-    <div class="bg-white rounded-lg border border-stone-200 p-6 mb-6">
-      <form method="GET" action="/vices/" class="flex items-center gap-4">
-        <label class="text-sm font-semibold text-stone-700">View Date:</label>
-        <input type="date" name="date" value="{{ selected_date }}" class="border border-stone-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
-        <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium px-6 py-2 rounded-lg transition">Go</button>
-      </form>
+    <!-- Navigation Items -->
+    <nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+      
+      <!-- Dashboard -->
+      <a href="/vices/" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                         bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 13l4-8m4 8V5m0 0H7m0 0L3 9" />
+        </svg>
+        <span class="font-medium text-sm">Dashboard</span>
+      </a>
+
+      <!-- History -->
+      <button onclick="toggleHistoryNav()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                                                  text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="font-medium text-sm">History</span>
+        <svg id="historyIcon" class="w-4 h-4 ml-auto flex-shrink-0 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <!-- History Submenu -->
+      <div id="historyMenu" class="hidden pl-4 space-y-1 max-h-48 overflow-y-auto">
+        {% for d in all_dates %}
+        <a href="/vices/?date={{ d }}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm
+                                        {% if d == selected_date %}bg-purple-50 text-purple-600 border-l-2 border-purple-500 font-medium{% else %}text-stone-600 hover:bg-stone-100{% endif %}">
+          {% if d == today %}
+            <span>📌</span>
+            <span class="mono font-medium">Today</span>
+          {% else %}
+            <span>📄</span>
+            <span class="mono truncate">{{ d }}</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+
+      <!-- Custom Habits Section -->
+      <div class="mt-6 pt-4 border-t border-stone-200">
+        <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold px-4 mb-3">Your Habits</p>
+        
+        {% if user_habits %}
+          <div class="space-y-1">
+            {% for habit in user_habits %}
+            <div class="px-4 py-2 rounded-lg flex items-center justify-between gap-2 text-sm hover:bg-stone-100 transition group">
+              <span class="flex items-center gap-2">
+                <span>{{ habit.icon }}</span>
+                <span class="text-stone-700 capitalize">{{ habit.name }}</span>
+              </span>
+              <form method="POST" action="/vices/habit/{{ habit.id }}/delete" class="opacity-0 group-hover:opacity-100 transition">
+                <button type="submit" class="text-xs text-stone-400 hover:text-red-500 transition" title="Delete habit">✕</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-xs text-stone-400 px-4 italic">No custom habits yet</p>
+        {% endif %}
+      </div>
+
+      <!-- Create Habit Button -->
+      <button onclick="openCreateHabitModal()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                                                    text-purple-600 hover:bg-purple-50 hover:text-purple-700 border border-purple-200 mt-4">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span class="font-medium text-sm">New Habit</span>
+      </button>
+
+    </nav>
+
+    <!-- Trackers Section -->
+    <div class="px-3 py-4 border-t border-stone-200 space-y-2">
+
+      <!-- Back to Main Dashboard -->
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 
+                        text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <p class="text-sm font-semibold text-stone-900">Main Dashboard</p>
+      </a>
     </div>
 
-    <!-- Add Vice Entry -->
-    {% if selected_date == today %}
-    <div class="bg-white border border-stone-200 rounded-xl p-6 mb-6 shadow-sm">
-      <p class="text-xs text-stone-400 uppercase tracking-widest font-semibold mb-4">Log Vice Entry</p>
-      <form method="POST" action="/vices/add" class="flex flex-col sm:flex-row gap-3">
-        <input type="hidden" name="entry_date" value="{{ selected_date }}">
-        <select name="vice_type_id" required class="flex-1 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400">
-          <option value="">Select vice type...</option>
+    <!-- Footer Section - User Info -->
+    <div class="px-3 py-6 border-t border-stone-200 space-y-3">
+      
+      <!-- User Card -->
+      <div class="bg-stone-50 rounded-lg p-3 border border-stone-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 
+                      flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            {{ username[0:2].upper() }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-stone-900 truncate">{{ username }}</p>
+            <p class="text-xs text-stone-500">User</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Change Password Button -->
+      <button onclick="openPasswordModal()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
+                              bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-medium text-sm justify-center">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        Change Password
+      </button>
+
+      <!-- Logout Button -->
+      <a href="/auth/logout" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 
+                              bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-medium text-sm justify-center">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT AREA -->
+  <div class="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
+    
+    <!-- TOP HEADER -->
+    <header class="bg-white border-b border-stone-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4">
+        <!-- Left side: Title -->
+        <div class="min-w-0 flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold text-stone-900 truncate">
+            {% if selected_date == today %}Today's Habits{% else %}{{ selected_date }}{% endif %}
+          </h1>
+          <p class="text-xs sm:text-sm text-stone-500 mt-1 mono">{{ selected_date }}</p>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button onclick="openSidebar()" class="lg:hidden flex-shrink-0 p-2 hover:bg-stone-100 rounded-lg transition">
+          <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <!-- New Entry Button -->
+        {% if selected_date == today %}
+        <button onclick="openLogHabitModal()" class="flex-shrink-0 bg-purple-500 hover:bg-purple-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-5 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-2">
+          <span>+</span>
+          <span class="hidden sm:inline">Log Habit</span>
+          <span class="sm:hidden">Add</span>
+        </button>
+        {% endif %}
+        
+        <!-- Quick Date Selector -->
+        <form method="GET" action="/vices/" class="flex items-center gap-2 flex-shrink-0">
+          <input type="date" name="date" value="{{ selected_date }}"
+            class="border border-stone-200 rounded-lg px-2 sm:px-4 py-2 text-xs sm:text-sm bg-stone-50 
+                   focus:outline-none focus:ring-2 focus:ring-purple-400 
+                   focus:bg-white transition">
+          <button type="submit"
+            class="bg-purple-500 hover:bg-purple-600 text-white text-xs sm:text-sm font-medium 
+                   px-2 sm:px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md flex-shrink-0">
+            Go
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <!-- SCROLLABLE CONTENT -->
+    <main class="flex-1 overflow-y-auto">
+      <div class="p-4 sm:p-6 lg:p-8 max-w-6xl">
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for cat, msg in messages %}
+            <div class="mb-4 text-sm {% if cat == 'error' %}text-red-600 bg-red-50 border border-red-200{% else %}text-green-600 bg-green-50 border border-green-200{% endif %} rounded-lg px-4 py-3">{{ msg }}</div>
+          {% endfor %}
+        {% endwith %}
+
+        <!-- Habits Summary Cards -->
+        {% if vice_summary %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {% for item in vice_summary %}
+          <div class="bg-white border border-stone-200 rounded-xl p-6 hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-4xl">{{ item.icon }}</span>
+              <span class="text-xs font-semibold text-stone-500 uppercase">{{ item.unit }}</span>
+            </div>
+            <h3 class="text-sm font-semibold text-stone-700 capitalize mb-1">{{ item.name }}</h3>
+            <div class="flex items-baseline gap-2">
+              <p class="text-2xl font-bold text-purple-600">{{ item.total_quantity|int }}</p>
+              <p class="text-xs text-stone-500">{{ item.count }} {% if item.count == 1 %}entry{% else %}entries{% endif %}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-12 text-center mb-8">
+          <p class="text-stone-500 text-sm">No habits tracked yet. Start by logging a habit!</p>
+        </div>
+        {% endif %}
+
+        <!-- Habit Entries List -->
+        <div>
+          <h2 class="text-sm font-semibold text-stone-700 uppercase tracking-wider mb-4">Today's Log</h2>
+          {% if vice_entries %}
+            <div class="space-y-2">
+              {% for entry in vice_entries %}
+              <div class="bg-white border border-stone-200 rounded-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:shadow-md transition-all">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-stone-800">{{ entry.icon }} {{ entry.name|capitalize }}</p>
+                  <p class="text-xs text-stone-500 mt-1">{{ entry.quantity }} {{ entry.unit }} {% if entry.notes %}• {{ entry.notes }}{% endif %}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                  <span class="text-xs text-stone-400">{{ entry.created_at[:16] }}</span>
+                  {% if selected_date == today %}
+                  <form method="POST" action="/vices/delete/{{ entry.id }}" class="inline">
+                    <input type="hidden" name="entry_date" value="{{ selected_date }}">
+                    <button type="submit" class="text-stone-300 hover:text-red-500 transition text-sm opacity-0 group-hover:opacity-100 font-bold" title="Delete entry">
+                      ✕
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+          <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-8 sm:p-12 text-center">
+            <p class="text-stone-500 text-sm">No entries yet. Log your first habit to get started!</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Log Habit Modal -->
+<div id="logHabitModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <!-- Modal Header -->
+    <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-white">Log Habit Entry</h3>
+      <button onclick="closeLogHabitModal()" class="text-white/80 hover:text-white transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <form method="POST" action="/vices/add" class="p-6 space-y-4">
+      <input type="hidden" name="entry_date" value="{{ today }}">
+
+      <!-- Habit Selection -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Select Habit</label>
+        <select name="vice_type_id" required class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition">
+          <option value="">Choose a habit...</option>
           {% for vice in vice_types %}
           <option value="{{ vice.id }}">{{ vice.icon }} {{ vice.name|capitalize }}</option>
           {% endfor %}
+          {% if user_habits %}
+            <optgroup label="Your Custom Habits">
+            {% for habit in user_habits %}
+              <option value="{{ habit.id }}">{{ habit.icon }} {{ habit.name|capitalize }}</option>
+            {% endfor %}
+            </optgroup>
+          {% endif %}
         </select>
-        <input type="number" name="quantity" placeholder="Quantity" required min="0" step="0.5" class="w-full sm:w-24 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400">
-        <input type="text" name="notes" placeholder="Notes (optional)" class="w-full sm:w-40 border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400">
-        <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap">
-          + Log
-        </button>
-      </form>
-    </div>
-    {% endif %}
-
-    <!-- Vices Summary -->
-    {% if vice_summary %}
-    <div class="grid grid-cols-1 md:grid-cols-{{ vice_summary|length }} gap-4 mb-6">
-      {% for item in vice_summary %}
-      <div class="bg-white border border-stone-200 rounded-lg p-6 text-center">
-        <p class="text-3xl mb-2">{{ item.icon }}</p>
-        <p class="text-sm font-semibold text-stone-700 capitalize">{{ item.name }}</p>
-        <p class="text-2xl font-bold text-purple-600 mt-2">{{ item.total_quantity|int }}</p>
-        <p class="text-xs text-stone-500 mt-1">{{ item.unit }} ({{ item.count }} entries)</p>
       </div>
-      {% endfor %}
-    </div>
-    {% endif %}
 
-    <!-- Vice Entries List -->
-    <div class="space-y-2">
-      <h2 class="text-sm font-semibold text-stone-700 uppercase tracking-wider mb-4">Today's Entries</h2>
-      {% if vice_entries %}
-        {% for entry in vice_entries %}
-        <div class="bg-white border border-stone-200 rounded-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:shadow-md transition-all">
-          <div class="min-w-0">
-            <p class="text-sm font-semibold text-stone-800">{{ entry.icon }} {{ entry.name|capitalize }}</p>
-            <p class="text-xs text-stone-500 mt-1">{{ entry.quantity }} {{ entry.unit }} {% if entry.notes %}• {{ entry.notes }}{% endif %}</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <span class="text-xs text-stone-400">{{ entry.created_at[:16] }}</span>
-            {% if selected_date == today %}
-            <form method="POST" action="/vices/delete/{{ entry.id }}">
-              <input type="hidden" name="entry_date" value="{{ selected_date }}">
-              <button type="submit" class="text-stone-300 hover:text-red-500 transition text-sm opacity-0 group-hover:opacity-100 font-bold">
-                ✕
-              </button>
-            </form>
-            {% endif %}
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-8 sm:p-12 text-center">
-          <p class="text-4xl sm:text-5xl mb-3">📝</p>
-          <p class="text-stone-500 font-medium">No vice entries for this day</p>
-          <p class="text-xs text-stone-400 mt-2">Start tracking by logging your first vice</p>
-        </div>
-      {% endif %}
+      <!-- Quantity -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Quantity</label>
+        <input type="number" name="quantity" placeholder="Enter quantity" required min="0" step="0.5" 
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition">
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Notes (Optional)</label>
+        <input type="text" name="notes" placeholder="Add any notes..." 
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition">
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 pt-4">
+        <button type="button" onclick="closeLogHabitModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-stone-200 text-stone-700 font-medium hover:bg-stone-50 transition">
+          Cancel
+        </button>
+        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-medium transition shadow-sm hover:shadow-md">
+          Log Entry
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Create Habit Modal -->
+<div id="createHabitModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <!-- Modal Header -->
+    <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-white">Create New Habit</h3>
+      <button onclick="closeCreateHabitModal()" class="text-white/80 hover:text-white transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <form method="POST" action="/vices/habit/create" class="p-6 space-y-4">
+      <!-- Habit Name -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Habit Name</label>
+        <input type="text" name="habit_name" placeholder="e.g., Running, Meditation, Reading" required 
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition">
+      </div>
+
+      <!-- Unit -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Unit of Measurement</label>
+        <input type="text" name="habit_unit" placeholder="e.g., minutes, miles, pages" required 
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition">
+      </div>
+
+      <!-- Icon -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Icon Emoji</label>
+        <input type="text" name="habit_icon" placeholder="e.g., 🏃, 🧘, 📚" value="📌" maxlength="2"
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition">
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-semibold text-stone-700 mb-2">Description (Optional)</label>
+        <textarea name="habit_description" placeholder="What is this habit about?" rows="2"
+          class="w-full border border-stone-200 rounded-lg px-4 py-2.5 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white transition resize-none"></textarea>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 pt-4">
+        <button type="button" onclick="closeCreateHabitModal()" class="flex-1 px-4 py-2.5 rounded-lg border border-stone-200 text-stone-700 font-medium hover:bg-stone-50 transition">
+          Cancel
+        </button>
+        <button type="submit" class="flex-1 px-4 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-medium transition shadow-sm hover:shadow-md">
+          Create Habit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change Password Modal (stub) -->
+<div id="passwordModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+    <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-white">Change Password</h3>
+      <button onclick="closePasswordModal()" class="text-white/80 hover:text-white transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="p-6 text-center">
+      <p class="text-stone-600 text-sm">Password change functionality coming soon.</p>
+      <button onclick="closePasswordModal()" class="mt-4 px-4 py-2 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-900 font-medium transition">
+        Close
+      </button>
     </div>
   </div>
 </div>
+
+<script>
+  // Sidebar toggle
+  function openSidebar() {
+    document.getElementById('sidebar').classList.remove('-left-64');
+    document.getElementById('sidebarOverlay').classList.remove('hidden');
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.add('-left-64');
+    document.getElementById('sidebarOverlay').classList.add('hidden');
+  }
+
+  // History toggle
+  function toggleHistoryNav() {
+    const menu = document.getElementById('historyMenu');
+    const icon = document.getElementById('historyIcon');
+    menu.classList.toggle('hidden');
+    icon.style.transform = menu.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(90deg)';
+  }
+
+  // Log Habit Modal
+  function openLogHabitModal() {
+    document.getElementById('logHabitModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLogHabitModal() {
+    document.getElementById('logHabitModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  // Create Habit Modal
+  function openCreateHabitModal() {
+    document.getElementById('createHabitModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCreateHabitModal() {
+    document.getElementById('createHabitModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  // Password Modal
+  function openPasswordModal() {
+    document.getElementById('passwordModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePasswordModal() {
+    document.getElementById('passwordModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  // Close modals on escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closeLogHabitModal();
+      closeCreateHabitModal();
+      closePasswordModal();
+    }
+  });
+</script>
+
 {% endblock %}
