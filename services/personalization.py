@@ -28,6 +28,15 @@ class PersonalizationService:
             "color": "blue",
             "supports": {"smoking", "alcohol", "caffeine", "habits", "consistency"},
         },
+        "financial": {
+            "id": "financial",
+            "name": "Financial Tracker",
+            "icon": "💸",
+            "description": "Track daily expenses, uploads, and spending patterns.",
+            "url": "/financial/",
+            "color": "emerald",
+            "supports": {"spending", "budget", "expenses", "consistency"},
+        },
     }
 
     GOAL_OPTIONS = [
@@ -44,8 +53,9 @@ class PersonalizationService:
     ]
 
     TRACKER_OPTIONS = [
-        {"value": "calorie", "label": "Meals and calories", "description": "Keep nutrition front and center."},
-        {"value": "vices", "label": "Habits and vices", "description": "Track smoking, alcohol, caffeine, and other behaviors."},
+        {"value": "calorie", "label": "Meals and calories", "description": "Keep nutrition front and center.", "icon": "🔥"},
+        {"value": "vices", "label": "Habits and vices", "description": "Track smoking, alcohol, caffeine, and other behaviors.", "icon": "📉"},
+        {"value": "financial", "label": "Expenses and spending", "description": "Log purchases, upload CSV exports, and review spending patterns.", "icon": "💸"},
     ]
 
     FOCUS_OPTIONS = [
@@ -53,6 +63,7 @@ class PersonalizationService:
         {"value": "alcohol", "label": "Alcohol"},
         {"value": "caffeine", "label": "Caffeine"},
         {"value": "meals", "label": "Meals and calories"},
+        {"value": "spending", "label": "Spending and budget"},
         {"value": "consistency", "label": "Consistency"},
     ]
 
@@ -61,6 +72,7 @@ class PersonalizationService:
         "alcohol": "Alcohol",
         "caffeine": "Caffeine",
         "meals": "Meals",
+        "spending": "Spending",
         "consistency": "Consistency",
     }
 
@@ -106,7 +118,7 @@ class PersonalizationService:
         experience_level = form.get("experience_level", "").strip()
 
         if not selected_trackers:
-            selected_trackers = ["calorie", "vices"]
+            selected_trackers = ["calorie", "vices", "financial"]
 
         if "smoking" in focus_habits or "alcohol" in focus_habits or "caffeine" in focus_habits:
             if "vices" not in selected_trackers:
@@ -115,6 +127,10 @@ class PersonalizationService:
         if "meals" in focus_habits or primary_goal == "improve_nutrition":
             if "calorie" not in selected_trackers:
                 selected_trackers.append("calorie")
+
+        if "spending" in focus_habits:
+            if "financial" not in selected_trackers:
+                selected_trackers.append("financial")
 
         priority_trackers = cls._prioritize_trackers(selected_trackers, focus_habits, primary_goal)
         dashboard_preferences = {
@@ -206,15 +222,19 @@ class PersonalizationService:
         if primary_goal == "create_consistency":
             scores["calorie"] += 10
             scores["vices"] += 10
+            scores["financial"] += 10
 
         for focus in focus_habits:
             if focus in {"smoking", "alcohol", "caffeine"}:
                 scores["vices"] += 25
             if focus == "meals":
                 scores["calorie"] += 25
+            if focus == "spending":
+                scores["financial"] += 25
             if focus == "consistency":
                 scores["calorie"] += 10
                 scores["vices"] += 10
+                scores["financial"] += 10
 
         return sorted(scores, key=lambda tracker_id: (-scores[tracker_id], tracker_id))
 
@@ -253,6 +273,11 @@ class PersonalizationService:
                 return "Highlighted for meal tracking"
             if primary_goal == "improve_nutrition":
                 return "Supports your nutrition goal"
+
+        if tracker_id == "financial":
+            if "spending" in focus_habits:
+                return "Highlighted for spending awareness"
+            return "Surfaces expense patterns and uploads"
 
         if tracker_id in (preferences.get("dashboard_preferences", {}).get("priority_trackers") or [])[:2]:
             return "Prioritized based on your onboarding choices"

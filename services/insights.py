@@ -116,6 +116,14 @@ class SmartInsights:
                     "type": "neutral",
                 })
 
+        if tracker_data.get("financial", {}).get("tracked"):
+            finance_total = tracker_data["financial"].get("total", 0)
+            finance_entries = tracker_data["financial"].get("entries_count", 0)
+            insights.append({
+                "text": f"You logged {finance_entries} expense entr{'y' if finance_entries == 1 else 'ies'} totaling {finance_total:.2f} today.",
+                "type": "neutral" if finance_total else "positive",
+            })
+
         # Add mock behavioral insights
         mock_insights = [
             {
@@ -158,6 +166,11 @@ class SmartInsights:
 
         if vices_active and not calorie_active:
             recommendations.append("Add calorie tracking for complete health visibility")
+
+        if tracker_data.get("financial", {}).get("tracked"):
+            recommendations.append("Review your expense categories tonight so high-spend patterns stay visible")
+        else:
+            recommendations.append("Log one purchase or upload a CSV to start building spending insights")
 
         calorie = tracker_data.get("calorie", {})
         if calorie.get("target"):

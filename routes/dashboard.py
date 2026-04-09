@@ -14,6 +14,7 @@ from services import (
     BehaviorAnalysis,
     PersonalizationService,
     CalorieGoalService,
+    FinancialTrackerService,
 )
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -69,6 +70,25 @@ def _aggregate_tracker_data(user_id: int, selected_date: str) -> dict:
         }
     except Exception as e:
         tracker_data["vices"] = {"tracked": False, "entries_count": 0, "error": str(e)}
+
+    # Financial tracker data
+    try:
+        FinancialTrackerService.ensure_seed_data(user_id)
+        finance_entries = database.get_financial_entries_by_date(user_id, selected_date)
+        finance_total = database.get_financial_total(user_id, selected_date)
+        tracker_data["financial"] = {
+            "tracked": len(finance_entries) > 0,
+            "entries_count": len(finance_entries),
+            "total": finance_total,
+            "target": 75,
+            "adherence": max(0, min(100, int((75 / finance_total) * 100))) if finance_total else 100,
+            "icon": "💸",
+            "name": "Financial Tracker",
+            "url": "/financial/",
+            "highlight_reason": "Daily expense awareness and imports",
+        }
+    except Exception as e:
+        tracker_data["financial"] = {"tracked": False, "entries_count": 0, "error": str(e)}
 
     return tracker_data
 
@@ -136,6 +156,26 @@ def _get_today_tracker_stats(user_id: int) -> list:
             "color": "sky",
             "url": "/",
             "highlight_reason": daily_score["level_title"],
+        })
+    except:
+        pass
+
+    # Financial stats
+    try:
+        FinancialTrackerService.ensure_seed_data(user_id)
+        finance_total = database.get_financial_total(user_id, selected_date)
+        finance_entries = database.get_financial_entries_by_date(user_id, selected_date)
+        tracker_stats.append({
+            "id": "financial",
+            "name": "Expenses",
+            "icon": "💸",
+            "value": round(finance_total, 2),
+            "unit": "spent",
+            "target": 75,
+            "percentage": max(0, min(100, int((finance_total / 75) * 100))) if finance_total else 0,
+            "color": "emerald",
+            "url": "/financial/",
+            "highlight_reason": f"{len(finance_entries)} spending entries logged",
         })
     except:
         pass

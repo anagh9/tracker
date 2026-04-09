@@ -1,11 +1,11 @@
 """
 Database module for Tracker App
-Handles: Users, Calorie Entries, Vices Entries
+Handles: Users, Calorie Entries, Vices Entries, Financial Entries
 """
 
 import json
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from config import Config
 
 DB_NAME = Config.DATABASE
@@ -119,6 +119,22 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             FOREIGN KEY (vice_type_id) REFERENCES vice_types (id) ON DELETE CASCADE,
             FOREIGN KEY (habit_id) REFERENCES user_habits (id) ON DELETE CASCADE
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS financial_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            entry_date TEXT NOT NULL,
+            merchant TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL,
+            payment_method TEXT DEFAULT 'Card',
+            source TEXT DEFAULT 'manual',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
     """)
 
@@ -755,3 +771,210 @@ def delete_nutrient_data(user_id, entry_date):
     )
     conn.commit()
     conn.close()
+
+
+# ============= FINANCIAL TRACKER FUNCTIONS =============
+
+def financial_entries_exist(user_id):
+    """Check whether a user already has financial tracker data."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM financial_entries WHERE user_id = ? LIMIT 1",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return bool(row)
+
+
+def seed_financial_entries(user_id):
+    """Seed 20 days of dummy financial data for a user if none exists."""
+    if financial_entries_exist(user_id):
+        return
+
+    conn = get_connection()
+    today = date.today()
+    categories = [
+        ("Groceries", "Fresh Basket", "UPI", 24.50, 8.25),
+        ("Transport", "Metro Card Reload", "Wallet", 12.00, 1.50),
+        ("Dining", "Cafe Meridian", "Card", 16.75, 3.25),
+        ("Bills", "Electric Utility", "Bank", 42.00, 0.0),
+        ("Shopping", "Daily Needs Store", "Card", 28.40, 5.10),
+        ("Subscriptions", "Streaming Plan", "Card", 9.99, 0.0),
+    ]
+
+    for offset in range(20):
+        entry_date = (today - timedelta(days=offset)).isoformat()
+        day_seed = offset % len(categories)
+        for idx in range(2 + (offset % 2)):
+            category, merchant, payment_method, base_amount, variance = categories[(day_seed + idx) % len(categories)]
+            amount = round(base_amount + (variance * ((offset + idx) % 3)), 2)
+            conn.execute(
+                """
+                INSERT INTO financial_entries (
+                    user_id, entry_date, merchant, amount, category, payment_method, source, notes
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    entry_date,
+                    merchant,
+                    amount,
+                    category,
+                    payment_method,
+                    "seed",
+                    "Preloaded sample data for dashboard exploration",
+                ),
+            )
+
+    conn.commit()
+    conn.close()
+
+
+def add_financial_entry(
+    user_id,
+    entry_date,
+    merchant,
+    amount,
+    category,
+    payment_method="Card",
+    source="manual",
+    notes="",
+):
+    """Insert a financial tracker entry."""
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO financial_entries (
+            user_id, entry_date, merchant, amount, category, payment_method, source, notes
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (user_id, entry_date, merchant, amount, category, payment_method, source, notes),
+    )
+    conn.commit()
+    conn.close()
+
+
+def add_financial_entries_bulk(user_id, entries, source="csv"):
+    """Bulk insert uploaded financial entries."""
+    if not entries:
+        return 0
+
+    conn = get_connection()
+    conn.executemany(
+        """
+        INSERT INTO financial_entries (
+            user_id, entry_date, merchant, amount, category, payment_method, source, notes
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                user_id,
+                entry["entry_date"],
+                entry["merchant"],
+                entry["amount"],
+                entry["category"],
+                entry.get("payment_method", "Imported"),
+                source,
+                entry.get("notes", ""),
+            )
+            for entry in entries
+        ],
+    )
+    conn.commit()
+    inserted = conn.total_changes
+    conn.close()
+    return inserted
+
+
+def get_financial_entries_by_date(user_id, entry_date):
+    """Get all expense entries for a date."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM financial_entries
+        WHERE user_id = ? AND entry_date = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (user_id, entry_date),
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def delete_financial_entry(entry_id, user_id):
+    """Delete a financial entry."""
+    conn = get_connection()
+    conn.execute(
+        "DELETE FROM financial_entries WHERE id = ? AND user_id = ?",
+        (entry_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_financial_dates(user_id):
+    """Get all distinct dates with financial entries."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT DISTINCT entry_date
+        FROM financial_entries
+        WHERE user_id = ?
+        ORDER BY entry_date DESC
+        """,
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    return [row["entry_date"] for row in rows]
+
+
+def get_financial_total(user_id, entry_date):
+    """Get total spending for a date."""
+    conn = get_connection()
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM financial_entries
+        WHERE user_id = ? AND entry_date = ?
+        """,
+        (user_id, entry_date),
+    ).fetchone()
+    conn.close()
+    return round(row["total"] or 0, 2)
+
+
+def get_financial_summary(user_id, entry_date):
+    """Get category summary for a date."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT category, COUNT(*) AS count, ROUND(SUM(amount), 2) AS total_amount
+        FROM financial_entries
+        WHERE user_id = ? AND entry_date = ?
+        GROUP BY category
+        ORDER BY total_amount DESC, category ASC
+        """,
+        (user_id, entry_date),
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_financial_entries_for_range(user_id, start_date, end_date):
+    """Get financial entries across a date range."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM financial_entries
+        WHERE user_id = ? AND entry_date BETWEEN ? AND ?
+        ORDER BY entry_date DESC, created_at DESC, id DESC
+        """,
+        (user_id, start_date, end_date),
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]

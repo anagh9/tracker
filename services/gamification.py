@@ -57,6 +57,12 @@ class GamificationEngine:
             breakdown["vices"] = vices_score
             score += vices_score
 
+        # Financial Tracker (max 20 points)
+        if "financial" in tracker_data and tracker_data["financial"]:
+            financial_score = GamificationEngine._score_financial(tracker_data["financial"])
+            breakdown["financial"] = financial_score
+            score += financial_score
+
         # Consistency bonus (max 20 points)
         consistency_bonus = GamificationEngine._calculate_consistency_bonus(tracker_data)
         breakdown["consistency"] = consistency_bonus
@@ -122,11 +128,27 @@ class GamificationEngine:
         return min(score, 30)
 
     @staticmethod
+    def _score_financial(financial_data: dict) -> int:
+        """Score expense tracking (max 20 points)."""
+        if not financial_data:
+            return 0
+
+        score = 0
+        if financial_data.get("tracked"):
+            score += 12
+
+        entry_count = financial_data.get("entries_count", 0)
+        if entry_count:
+            score += min(8, entry_count * 2)
+
+        return min(score, 20)
+
+    @staticmethod
     def _calculate_consistency_bonus(tracker_data: dict) -> int:
         """Bonus for using multiple trackers (max 20 points)"""
-        active_trackers = sum(1 for tracker in ["calorie", "vices"] 
+        active_trackers = sum(1 for tracker in ["calorie", "vices", "financial"]
                              if tracker_data.get(tracker, {}).get("tracked"))
-        return min(20, active_trackers * 10)
+        return min(20, active_trackers * 7)
 
     @staticmethod
     def _calculate_streak_bonus(streak: int) -> int:
@@ -218,6 +240,7 @@ class StreakTracker:
             "daily_checkin": 7,
             "calorie_logging": 5,
             "vices_tracking": 3,
+            "financial_logging": 4,
             "consistent_week": True,
             "all_trackers_active": 5,
         }
@@ -242,6 +265,13 @@ class StreakTracker:
                 "badge": "🏥",
                 "unlocked": True,
                 "date": "2024-03-15",
+            },
+            {
+                "title": "Money Mapped",
+                "description": "Log expenses or import a statement",
+                "badge": "💳",
+                "unlocked": True,
+                "date": "2024-03-18",
             },
             {
                 "title": "Discipline Master",

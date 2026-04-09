@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div id="dashContainer" class="flex h-screen bg-stone-50 overflow-hidden">
+  <div id="sidebarOverlay" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar" class="w-64 bg-white border-r border-stone-200 shadow-sm flex flex-col fixed lg:static lg:w-64 h-full -left-64 lg:left-0 transition-all duration-300 z-40">
+    <button onclick="closeSidebar()" class="absolute top-4 right-4 lg:hidden p-2 hover:bg-stone-100 rounded-lg transition">
+      <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <div class="px-6 py-6 border-b border-stone-200">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">💸</span>
+        <span class="mono text-lg font-bold text-stone-900">Finance<span class="text-emerald-500">Flow</span></span>
+      </div>
+      <p class="text-xs text-stone-400 mt-1">expense tracker</p>
+    </div>
+
+    <nav class="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+      <a href="/financial/" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 13l4-8m4 8V5m0 0H7m0 0L3 9" />
+        </svg>
+        <span class="font-medium text-sm">Dashboard</span>
+      </a>
+
+      <button onclick="toggleHistoryNav()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="font-medium text-sm">History</span>
+        <svg id="historyIcon" class="w-4 h-4 ml-auto flex-shrink-0 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div id="historyMenu" class="hidden pl-4 space-y-1 max-h-48 overflow-y-auto">
+        {% for d in all_dates %}
+        <a href="/financial/?date={{ d }}" class="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm {% if d == selected_date %}bg-emerald-50 text-emerald-700 border-l-2 border-emerald-500 font-medium{% else %}text-stone-600 hover:bg-stone-100{% endif %}">
+          {% if d == today %}
+          <span>📌</span>
+          <span class="mono font-medium">Today</span>
+          {% else %}
+          <span>📄</span>
+          <span class="mono truncate">{{ d }}</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+
+      <button onclick="openUploadModal()" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4 4m4-4v12" />
+        </svg>
+        <span class="font-medium text-sm">Upload CSV</span>
+      </button>
+
+      <a href="/financial/csv-template" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-stone-600 hover:bg-stone-100 hover:text-stone-900">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M4 18h16M4 6h16" />
+        </svg>
+        <span class="font-medium text-sm">CSV Template</span>
+      </a>
+    </nav>
+
+    <div class="px-3 py-4 border-t border-stone-200 space-y-2">
+      <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200">
+        <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <p class="text-sm font-semibold text-stone-900">Main Dashboard</p>
+      </a>
+    </div>
+
+    <div class="px-3 py-6 border-t border-stone-200 space-y-3">
+      <div class="bg-stone-50 rounded-lg p-3 border border-stone-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            {{ username[0:2].upper() }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-stone-900 truncate">{{ username }}</p>
+            <p class="text-xs text-stone-500">User</p>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="openPasswordModal()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-medium text-sm justify-center">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        Change Password
+      </button>
+
+      <a href="/auth/logout" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-medium text-sm justify-center">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Logout
+      </a>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col overflow-hidden w-full lg:w-auto">
+    <header class="bg-white border-b border-stone-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-xl sm:text-2xl font-bold text-stone-900 truncate">
+            {% if selected_date == today %}Today's Expenses{% else %}{{ selected_date }}{% endif %}
+          </h1>
+          <p class="text-xs sm:text-sm text-stone-500 mt-1 mono">{{ selected_date }}</p>
+        </div>
+
+        <button onclick="openSidebar()" class="lg:hidden flex-shrink-0 p-2 hover:bg-stone-100 rounded-lg transition">
+          <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {% if selected_date == today %}
+        <button onclick="openExpenseModal()" class="flex-shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-5 py-2.5 rounded-lg transition shadow-sm hover:shadow-md whitespace-nowrap flex items-center gap-2">
+          <span>+</span>
+          <span class="hidden sm:inline">Log Expense</span>
+          <span class="sm:hidden">Add</span>
+        </button>
+        {% endif %}
+
+        <form method="GET" action="/financial/" class="flex items-center gap-2 flex-shrink-0">
+          <input type="date" name="date" value="{{ selected_date }}" class="border border-stone-200 rounded-lg px-2 sm:px-4 py-2 text-xs sm:text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:bg-white transition">
+          <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-medium px-2 sm:px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md flex-shrink-0">
+            Go
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto">
+      <div class="p-4 sm:p-6 lg:p-8 max-w-6xl">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for cat, msg in messages %}
+            <div class="mb-4 text-sm {% if cat == 'error' %}text-red-600 bg-red-50 border border-red-200{% else %}text-green-700 bg-green-50 border border-green-200{% endif %} rounded-lg px-4 py-3">{{ msg }}</div>
+          {% endfor %}
+        {% endwith %}
+
+        <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-6 mb-6 shadow-sm">
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div>
+              <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold mb-2">Daily Spend</p>
+              <p class="mono text-4xl sm:text-5xl font-bold text-emerald-600">{{ '%.2f'|format(total_spend) }}</p>
+              <p class="text-sm text-stone-600 mt-1">spent across {{ entries|length }} expense{% if entries|length != 1 %}s{% endif %}</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full lg:w-auto">
+              <div class="rounded-xl bg-white/75 border border-emerald-200 px-4 py-3">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">20-Day Total</p>
+                <p class="mono mt-1 text-2xl font-bold text-stone-900">{{ '%.2f'|format(analytics.overview.total_20d) }}</p>
+                <p class="text-xs text-stone-500">demo data window</p>
+              </div>
+              <div class="rounded-xl bg-white/75 border border-emerald-200 px-4 py-3">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Avg / Day</p>
+                <p class="mono mt-1 text-2xl font-bold text-stone-900">{{ '%.2f'|format(analytics.overview.average_daily_spend) }}</p>
+                <p class="text-xs text-stone-500">placeholder analytics</p>
+              </div>
+              <div class="rounded-xl bg-white/75 border border-emerald-200 px-4 py-3">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Top Category</p>
+                <p class="mt-1 text-lg font-bold text-stone-900">{{ analytics.overview.top_category }}</p>
+                <p class="text-xs text-stone-500">{{ '%.2f'|format(analytics.overview.top_category_amount) }} in total</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 mb-6">
+          <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs text-stone-500 uppercase tracking-widest font-semibold">Insight headline</p>
+                <h2 class="mt-2 text-2xl font-bold text-stone-900">{{ analytics.headline.title }}</h2>
+                <p class="mt-3 text-sm leading-6 text-stone-600">{{ analytics.headline.description }}</p>
+              </div>
+              <div class="text-4xl">{{ analytics.headline.icon }}</div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="rounded-xl bg-stone-50 border border-stone-200 px-4 py-4">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Active Days</p>
+                <p class="mt-2 text-2xl font-bold text-stone-900">{{ analytics.overview.active_days }}</p>
+              </div>
+              <div class="rounded-xl bg-stone-50 border border-stone-200 px-4 py-4">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Top Merchant</p>
+                <p class="mt-2 text-lg font-bold text-stone-900">{{ analytics.overview.top_merchant }}</p>
+                <p class="text-xs text-stone-500">{{ '%.2f'|format(analytics.overview.top_merchant_amount) }}</p>
+              </div>
+              <div class="rounded-xl bg-stone-50 border border-stone-200 px-4 py-4">
+                <p class="text-xs uppercase tracking-widest text-stone-500 font-semibold">Upload Ready</p>
+                <p class="mt-2 text-lg font-bold text-stone-900">CSV imports</p>
+                <p class="text-xs text-stone-500">Paytm-style exports supported</p>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <p class="text-sm font-semibold text-stone-700 mb-4">Last 7 days</p>
+              <div class="grid grid-cols-7 gap-3 items-end h-40">
+                {% for point in analytics.daily_series %}
+                <div class="flex flex-col items-center gap-3">
+                  <div class="w-full rounded-t-xl bg-gradient-to-t from-emerald-500 to-teal-300 min-h-[12px]" style="height: {{ point.bar_height }}%"></div>
+                  <div class="text-center">
+                    <p class="text-xs font-semibold text-stone-700">{{ point.label }}</p>
+                    <p class="text-[11px] text-stone-500">{{ '%.0f'|format(point.amount) }}</p>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+              <p class="text-sm font-semibold text-stone-700 mb-4">Category mix</p>
+              <div class="space-y-3">
+                {% for item in category_summary %}
+                <div class="rounded-xl border border-{{ item.color }}-200 bg-{{ item.color }}-50 p-4">
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                      <span class="text-2xl">{{ item.icon }}</span>
+                      <div>
+                        <p class="text-sm font-semibold text-stone-900">{{ item.category }}</p>
+                        <p class="text-xs text-stone-500">{{ item.count }} entries</p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="mono text-lg font-bold text-stone-900">{{ '%.2f'|format(item.total_amount) }}</p>
+                      <p class="text-xs text-stone-500">{{ item.percentage }}%</p>
+                    </div>
+                  </div>
+                </div>
+                {% else %}
+                <div class="rounded-xl border-2 border-dashed border-stone-200 p-8 text-center text-sm text-stone-500">
+                  No spending logged for this day yet.
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+              <p class="text-sm font-semibold text-stone-700 mb-4">Recommendations</p>
+              <div class="space-y-3">
+                {% for rec in analytics.recommendations %}
+                <div class="rounded-xl bg-stone-50 border border-stone-200 px-4 py-3 text-sm text-stone-700">{{ rec }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[0.95fr_1.05fr] gap-6">
+          <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <div class="flex items-center justify-between gap-4 mb-4">
+              <h2 class="text-sm font-semibold text-stone-700 uppercase tracking-wider">Mock insights</h2>
+              <span class="text-xs rounded-full bg-amber-100 text-amber-700 px-3 py-1 font-semibold">Static for now</span>
+            </div>
+            <div class="space-y-3">
+              {% for insight in analytics.insights %}
+              <div class="rounded-xl border px-4 py-4 {% if insight.tone == 'positive' %}border-emerald-200 bg-emerald-50{% elif insight.tone == 'warning' %}border-amber-200 bg-amber-50{% else %}border-stone-200 bg-stone-50{% endif %}">
+                <p class="text-sm font-semibold text-stone-900">{{ insight.title }}</p>
+                <p class="mt-1 text-sm leading-6 text-stone-600">{{ insight.text }}</p>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="bg-white border border-stone-200 rounded-xl p-6 shadow-sm">
+            <div class="flex items-center justify-between gap-4 mb-4">
+              <h2 class="text-sm font-semibold text-stone-700 uppercase tracking-wider">Expense log</h2>
+              <button onclick="openExpenseModal()" class="text-sm font-semibold text-emerald-600 hover:text-emerald-700">Add expense</button>
+            </div>
+            {% if entries %}
+            <div class="space-y-2">
+              {% for entry in entries %}
+              <div class="bg-white border border-stone-200 rounded-lg px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:shadow-md transition-all">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-stone-800">{{ entry.merchant }}</p>
+                  <p class="text-xs text-stone-500 mt-1">{{ entry.category }} • {{ entry.payment_method }} • {{ entry.source|title }}{% if entry.notes %} • {{ entry.notes }}{% endif %}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                  <span class="mono text-sm font-semibold text-stone-900">{{ '%.2f'|format(entry.amount) }}</span>
+                  {% if selected_date == today %}
+                  <form method="POST" action="/financial/delete/{{ entry.id }}" class="inline">
+                    <input type="hidden" name="entry_date" value="{{ selected_date }}">
+                    <button type="submit" class="text-stone-300 hover:text-red-500 transition text-sm opacity-0 group-hover:opacity-100 font-bold" title="Delete entry">✕</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-white border-2 border-dashed border-stone-200 rounded-xl p-8 sm:p-12 text-center">
+              <p class="text-stone-500 text-sm">No expenses logged yet. Add one manually or import a CSV.</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="expenseModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 px-4">
+  <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h3 class="text-lg font-bold text-stone-900">Log expense</h3>
+        <p class="text-sm text-stone-500">Manual entry for today's spending.</p>
+      </div>
+      <button onclick="closeExpenseModal()" class="rounded-lg p-2 hover:bg-stone-100">✕</button>
+    </div>
+    <form method="POST" action="/financial/add" class="mt-6 space-y-4">
+      <input type="hidden" name="entry_date" value="{{ selected_date }}">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class="mb-2 block text-sm font-semibold text-stone-700">Merchant</label>
+          <input type="text" name="merchant" required class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="Cafe Meridian">
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-semibold text-stone-700">Amount</label>
+          <input type="number" name="amount" min="0.01" step="0.01" required class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="18.50">
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-semibold text-stone-700">Category</label>
+          <select name="category" class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            {% for category in categories %}
+            <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-semibold text-stone-700">Payment method</label>
+          <select name="payment_method" class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            {% for method in payment_methods %}
+            <option value="{{ method }}">{{ method }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-semibold text-stone-700">Date</label>
+          <input type="date" name="entry_date" value="{{ selected_date }}" class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="mb-2 block text-sm font-semibold text-stone-700">Notes</label>
+          <input type="text" name="notes" class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="Optional memo">
+        </div>
+      </div>
+      <button type="submit" class="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 transition">Save expense</button>
+    </form>
+  </div>
+</div>
+
+<div id="uploadModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 px-4">
+  <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h3 class="text-lg font-bold text-stone-900">Upload CSV</h3>
+        <p class="text-sm text-stone-500">Import expenses from Paytm or any similar export.</p>
+      </div>
+      <button onclick="closeUploadModal()" class="rounded-lg p-2 hover:bg-stone-100">✕</button>
+    </div>
+    <form method="POST" action="/financial/upload-csv" enctype="multipart/form-data" class="mt-6 space-y-4">
+      <input type="hidden" name="redirect_date" value="{{ selected_date }}">
+      <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-4">
+        <p class="text-sm font-semibold text-emerald-900">Need a format to start from?</p>
+        <p class="mt-1 text-xs leading-5 text-emerald-700">Download the starter template, fill in your expenses, then upload it back here.</p>
+        <a href="/financial/csv-template" class="mt-3 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
+          Download CSV template
+        </a>
+      </div>
+      <div>
+        <label class="mb-2 block text-sm font-semibold text-stone-700">CSV file</label>
+        <input type="file" name="csv_file" accept=".csv,text/csv" required class="w-full rounded-xl border border-stone-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+      </div>
+      <div class="rounded-xl bg-stone-50 border border-stone-200 px-4 py-3 text-xs text-stone-500">
+        Expected columns: `date`, `merchant` or `description`, `amount`, plus optional `category`, `payment method`, and `notes`.
+      </div>
+      <button type="submit" class="w-full rounded-xl bg-stone-900 px-4 py-3 text-sm font-semibold text-white hover:bg-stone-800 transition">Import expenses</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openSidebar() {
+    document.getElementById('sidebar').classList.remove('-left-64');
+    document.getElementById('sidebarOverlay').classList.remove('hidden');
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.add('-left-64');
+    document.getElementById('sidebarOverlay').classList.add('hidden');
+  }
+
+  function toggleHistoryNav() {
+    const menu = document.getElementById('historyMenu');
+    const icon = document.getElementById('historyIcon');
+    menu.classList.toggle('hidden');
+    icon.classList.toggle('rotate-90');
+  }
+
+  function openExpenseModal() {
+    const modal = document.getElementById('expenseModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeExpenseModal() {
+    const modal = document.getElementById('expenseModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function openUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+</script>
+
+{% endblock %}
