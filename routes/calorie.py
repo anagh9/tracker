@@ -46,7 +46,6 @@ def index():
         entries=entries,
         selected_date=selected_date,
         total=total,
-        calorie_profile=calorie_profile,
         calorie_target=calorie_target,
         remaining_calories=remaining_calories,
         all_dates=all_dates,
