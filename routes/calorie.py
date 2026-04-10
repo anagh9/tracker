@@ -56,25 +56,52 @@ def add():
     """Add a calorie entry"""
     user_id = session["user_id"]
     food_item = request.form.get("food_item", "").strip()
+    quantity = request.form.get("quantity", "1").strip()
     calories = request.form.get("calories", "").strip()
     entry_date = request.form.get("entry_date", date.today().isoformat())
 
-    if not food_item or not calories:
-        flash("Both food item and calories are required.", "error")
+    if not food_item or not calories or not quantity:
+        flash("Food item, quantity, and calories are required.", "error")
         return redirect(url_for("calorie.index", date=entry_date))
 
     try:
+        quantity = float(quantity)
         calories = int(calories)
-        if calories <= 0:
+        if quantity <= 0 or calories <= 0:
             raise ValueError
     except ValueError:
-        flash("Calories must be a positive number.", "error")
+        flash("Quantity and calories must be positive numbers.", "error")
         return redirect(url_for("calorie.index", date=entry_date))
 
-    database.add_entry(user_id, entry_date, food_item, calories)
+    database.add_entry(user_id, entry_date, food_item, calories, quantity=quantity)
     # Invalidate nutrient cache for this date so it gets recalculated
     database.delete_nutrient_data(user_id, entry_date)
-    flash(f"Added {food_item} ({calories} kcal)", "success")
+    quantity_label = int(quantity) if quantity.is_integer() else quantity
+    flash(f"Added {quantity_label} x {food_item} ({calories} kcal)", "success")
+    return redirect(url_for("calorie.index", date=entry_date))
+
+
+@calorie_bp.route("/repeat/<int:entry_id>", methods=["POST"])
+@login_required
+def repeat_entry(entry_id):
+    """Repeat a previously logged calorie entry for a target date."""
+    user_id = session["user_id"]
+    entry_date = request.form.get("entry_date", date.today().isoformat())
+    entry = database.get_entry_by_id(entry_id, user_id)
+
+    if not entry:
+        flash("Could not find that food entry.", "error")
+        return redirect(url_for("calorie.index", date=entry_date))
+
+    database.add_entry(
+        user_id,
+        entry_date,
+        entry["food_item"],
+        entry["calories"],
+        quantity=entry.get("quantity", 1),
+    )
+    database.delete_nutrient_data(user_id, entry_date)
+    flash(f"Added {entry['food_item']} again.", "success")
     return redirect(url_for("calorie.index", date=entry_date))
 
 
@@ -105,7 +132,7 @@ def export():
 
     # Headers
     from openpyxl.styles import Font, PatternFill
-    headers = ["Date", "Food Item", "Calories", "Time"]
+    headers = ["Date", "Food Item", "Quantity", "Calories", "Time"]
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = Font(bold=True)
@@ -119,17 +146,18 @@ def export():
         for entry in entries:
             ws.cell(row=row, column=1, value=entry_date)
             ws.cell(row=row, column=2, value=entry["food_item"])
-            ws.cell(row=row, column=3, value=entry["calories"])
-            ws.cell(row=row, column=4, value=entry["created_at"][:16])
+            ws.cell(row=row, column=3, value=entry.get("quantity", 1))
+            ws.cell(row=row, column=4, value=entry["calories"])
+            ws.cell(row=row, column=5, value=entry["created_at"][:16])
             row += 1
 
     # Column widths
     ws.column_dimensions["A"].width = 12
     ws.column_dimensions["B"].width = 25
     ws.column_dimensions["C"].width = 10
-    ws.column_dimensions["D"].width = 16
+    ws.column_dimensions["D"].width = 10
+    ws.column_dimensions["E"].width = 16
 
-    # ── Fix: save to BytesIO then rewind before send_file ─────────────
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -140,6 +168,7 @@ def export():
         as_attachment=True,
         download_name=f"calorie_tracker_{date.today()}.xlsx"
     )
+
 
 def validate_food_input(food_input: str) -> tuple[bool, str | None]:
     """
@@ -184,9 +213,20 @@ def validate_food_input(food_input: str) -> tuple[bool, str | None]:
     return True, None
 
 
+def normalize_food_name(food_input: str) -> str:
+    """Normalize food text and strip leading quantity words when present."""
+    normalized_food = re.sub(r'\s+', ' ', food_input.lower().strip())
+    normalized_food = re.sub(
+        r'^\d+(\.\d+)?\s*(x\s+)?',
+        '',
+        normalized_food
+    )
+    return normalized_food.strip()
+
+
 def normalize_food_key(food_input: str) -> str:
-    """Normalize food string for consistent cache lookups."""
-    return re.sub(r'\s+', ' ', food_input.lower().strip())
+    """Normalize food string for consistent per-unit cache lookups."""
+    return normalize_food_name(food_input)
 
 
 @calorie_bp.route("/suggest-food", methods=["POST"])
@@ -195,6 +235,11 @@ def suggest_food():
     """AI-powered food suggestion with caching."""
     try:
         food_input = request.json.get("food_input", "").strip()
+        quantity_raw = request.json.get("quantity", 1)
+        quantity = float(quantity_raw)
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive.")
+
         if not food_input:
             return jsonify({"error": "Food input is required"}), 400
 
@@ -212,7 +257,8 @@ def suggest_food():
         ).fetchone()
 
         if cached:
-            # Update access stats (fire-and-forget, non-blocking)
+            unit_calories = int(cached["calories"])
+            total_calories = int(round(unit_calories * quantity))
             db.execute(
                 """UPDATE food_calorie_cache
                    SET hit_count = hit_count + 1,
@@ -224,29 +270,33 @@ def suggest_food():
             db.close()
             return jsonify({
                 "food": cached["food_name"],
-                "calories": cached["calories"],
-                "suggestion": f"{cached['food_name']}: {cached['calories']}",
-                "cached": True   # optional: lets frontend know it was instant
+                "calories": total_calories,
+                "unit_calories": unit_calories,
+                "quantity": quantity,
+                "suggestion": f"{cached['food_name']}: {unit_calories} kcal each, {total_calories} kcal total",
+                "cached": True
             })
 
-        # ── 2. Cache miss → call OpenAI ────────────────────────────────
         api_key = Config.OPENAI_API_KEY
         if not api_key:
             return jsonify({"error": "OpenAI API key not configured"}), 500
 
         client = OpenAI(api_key=api_key)
+        quantity_label = int(quantity) if quantity.is_integer() else quantity
+        base_food_name = normalize_food_name(food_input)
         response = client.chat.completions.create(
             model=Config.OPENAI_MODEL,
             messages=[
                 {
                     "role": "system",
                     "content": "You are a calorie estimation assistant. "
-                               "Respond with ONLY: 'food_name: calories_number'. "
-                               "Be brief and accurate."
+                               "Estimate calories for ONE unit or ONE serving only. "
+                               "Do not estimate for multiple pieces together. "
+                               "Respond with ONLY: 'food_name: calories_number'."
                 },
                 {
                     "role": "user",
-                    "content": f"Estimate calories for: {food_input}"
+                    "content": f"Estimate calories for 1 serving/item of {base_food_name}. The user plans to log quantity {quantity_label}, but you must return calories for one item/serving only."
                 }
             ],
             temperature=Config.OPENAI_TEMPERATURE,
@@ -255,9 +305,8 @@ def suggest_food():
 
         suggestion = response.choices[0].message.content.strip()
 
-        print(f"OpenAI response for '{food_input}': {suggestion}")
-
         if ":" not in suggestion:
+            db.close()
             return jsonify({
                 "error": f"Could not suggest calorie value for {food_input}",
                 "raw_response": suggestion
@@ -266,14 +315,16 @@ def suggest_food():
         parts = suggestion.split(":")
         food_name = parts[0].strip()
         try:
-            calories = int(parts[-1].strip().split()[0])
+            unit_calories = int(parts[-1].strip().split()[0])
         except (ValueError, IndexError):
+            db.close()
             return jsonify({
                 "error": f"Could not suggest calorie value for {food_input}",
                 "raw_response": suggestion
             }), 400
 
-        # ── 3. Store in cache ──────────────────────────────────────────
+        calories = int(round(unit_calories * quantity))
+
         db.execute(
             """INSERT INTO food_calorie_cache (food_key, food_name, calories)
                VALUES (?, ?, ?)
@@ -282,7 +333,7 @@ def suggest_food():
                    food_name = excluded.food_name,
                    hit_count = hit_count + 1,
                    last_accessed = CURRENT_TIMESTAMP""",
-            (food_key, food_name, calories)
+            (food_key, food_name, unit_calories)
         )
         db.commit()
         db.close()
@@ -290,7 +341,9 @@ def suggest_food():
         return jsonify({
             "food": food_name,
             "calories": calories,
-            "suggestion": suggestion,
+            "unit_calories": unit_calories,
+            "quantity": quantity,
+            "suggestion": f"{food_name}: {unit_calories} kcal each, {calories} kcal total for {quantity_label}",
             "cached": False
         })
 
@@ -351,7 +404,11 @@ def nutrient_breakdown():
         # No cache found - call OpenAI to analyze nutrients
         # Prepare food list for nutrient analysis
         food_list = "\n".join(
-            [f"- {e['food_item']} ({e['calories']} kcal)" for e in entries])
+            [
+                f"- {e['food_item']} x{int(e['quantity']) if float(e['quantity']).is_integer() else e['quantity']} ({e['calories']} kcal)"
+                for e in entries
+            ]
+        )
 
         api_key = Config.OPENAI_API_KEY
         if not api_key:

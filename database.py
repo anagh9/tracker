@@ -37,6 +37,7 @@ def init_db():
             user_id INTEGER NOT NULL,
             entry_date TEXT NOT NULL,
             food_item TEXT NOT NULL,
+            quantity REAL NOT NULL DEFAULT 1,
             calories INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -138,6 +139,29 @@ def init_db():
     conn.commit()
     conn.close()
 
+
+def migrate_entries_table():
+    """Add quantity column to calorie entries for older databases."""
+    conn = get_connection()
+    try:
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'")
+        if not cursor.fetchone():
+            conn.close()
+            return
+
+        columns = {row[1]: row for row in conn.execute("PRAGMA table_info(entries)").fetchall()}
+        if "quantity" not in columns:
+            conn.execute("ALTER TABLE entries ADD COLUMN quantity REAL NOT NULL DEFAULT 1")
+            conn.commit()
+        conn.close()
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        conn.close()
+        print(f"✗ Entry migration error: {str(e)}")
+
 # Run migration on startup
 def migrate_vices_table():
     """Add habit_id column to vices table for existing databases"""
@@ -238,6 +262,7 @@ def migrate_vices_table():
         print(f"✗ Migration error: {str(e)}")
 
 migrate_vices_table()
+migrate_entries_table()
 
 # ============= USER MANAGEMENT FUNCTIONS =============
 
@@ -317,14 +342,25 @@ def get_entries_by_date(user_id, entry_date):
     return rows
 
 
-def add_entry(user_id, entry_date, food_item, calories):
+def add_entry(user_id, entry_date, food_item, calories, quantity=1):
     conn = get_connection()
     conn.execute(
-        "INSERT INTO entries (user_id, entry_date, food_item, calories) VALUES (?, ?, ?, ?)",
-        (user_id, entry_date, food_item, calories)
+        "INSERT INTO entries (user_id, entry_date, food_item, quantity, calories) VALUES (?, ?, ?, ?, ?)",
+        (user_id, entry_date, food_item, quantity, calories)
     )
     conn.commit()
     conn.close()
+
+
+def get_entry_by_id(entry_id, user_id):
+    """Get a single calorie entry by id."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM entries WHERE id = ? AND user_id = ?",
+        (entry_id, user_id),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def delete_entry(entry_id, user_id):
@@ -576,4 +612,3 @@ def delete_nutrient_data(user_id, entry_date):
     )
     conn.commit()
     conn.close()
-

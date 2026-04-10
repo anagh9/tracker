@@ -303,7 +303,19 @@
             {% for entry in entries %}
             <div class="bg-white border border-stone-200 rounded-lg px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 group hover:shadow-md transition-all duration-200">
               <div class="min-w-0">
-                <p class="text-sm font-semibold text-stone-800 truncate">{{ entry["food_item"] }}</p>
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-semibold text-stone-800 truncate">{{ entry["food_item"] }}</p>
+                  {% if selected_date == today %}
+                  <form method="POST" action="/calorie/repeat/{{ entry['id'] }}">
+                    <input type="hidden" name="entry_date" value="{{ selected_date }}">
+                    <button type="submit" title="Add this again"
+                      class="flex h-7 w-7 items-center justify-center rounded-full bg-orange-50 text-base font-bold text-orange-600 transition hover:bg-orange-100">
+                      +
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+                <p class="text-xs text-stone-500 mt-1">Quantity: {{ entry["quantity"]|int if entry["quantity"] == (entry["quantity"]|int) else entry["quantity"] }}</p>
                 <p class="mono text-xs text-stone-400 mt-1">{{ entry["created_at"][:16] }}</p>
               </div>
               <div class="flex items-center gap-4 flex-shrink-0">
@@ -373,6 +385,21 @@
               <span class="hidden sm:inline">AI</span>
             </button>
           </div>
+        </div>
+
+        <!-- Quantity Input -->
+        <div>
+          <label class="block text-sm font-semibold text-stone-700 mb-2">Quantity</label>
+          <input
+            type="number"
+            id="modalQuantityInput"
+            name="quantity"
+            value="1"
+            min="0.25"
+            step="0.25"
+            required
+            class="w-full border border-stone-200 rounded-lg px-4 py-3 text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition mono">
+          <p class="text-xs text-stone-500 mt-1">AI estimates will use this quantity for total calories.</p>
         </div>
 
         <!-- Calories Input -->
@@ -675,7 +702,11 @@
     if (entries.length === 0) return;
 
     // Prepare data
-    const labels = entries.map(e => e.food_item);
+    const labels = entries.map(e => {
+      const quantity = Number(e.quantity || 1);
+      const quantityLabel = Number.isInteger(quantity) ? quantity : quantity.toFixed(2).replace(/\.00$/, '');
+      return `${e.food_item} x${quantityLabel}`;
+    });
     const data = entries.map(e => e.calories);
     
     // Color palette
@@ -1050,9 +1081,8 @@
     const food = document.getElementById('suggestedFood').textContent;
     const calories = document.getElementById('suggestedCalories').textContent;
     
-    // Populate the form and close modal
-    document.getElementById('foodItemInput').value = food;
-    document.getElementById('caloriesInput').value = calories;
+    document.getElementById('modalFoodItemInput').value = food;
+    document.getElementById('modalCaloriesInput').value = calories;
     closeSuggestionModal();
   }
 
@@ -1066,6 +1096,7 @@
     }, 100);
     // Update the date field
     document.getElementById('modalEntryDate').value = '{{ selected_date }}';
+    document.getElementById('modalQuantityInput').value = '1';
   }
 
   function closeNewEntryModal() {
@@ -1077,9 +1108,15 @@
 
   function suggestCaloriesFromModal() {
     const foodInput = document.getElementById('modalFoodItemInput').value.trim();
+    const quantity = document.getElementById('modalQuantityInput').value.trim();
     
     if (!foodInput) {
       alert('Please enter a food item first');
+      return;
+    }
+
+    if (!quantity || Number(quantity) <= 0) {
+      alert('Please enter a valid quantity first');
       return;
     }
 
@@ -1093,7 +1130,8 @@
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        food_input: foodInput
+        food_input: foodInput,
+        quantity: quantity
       })
     })
     .then(response => response.json())
@@ -1104,6 +1142,7 @@
         // Populate modal fields directly without showing suggestion modal
         document.getElementById('modalFoodItemInput').value = data.food;
         document.getElementById('modalCaloriesInput').value = data.calories;
+        document.getElementById('modalQuantityInput').value = data.quantity;
         
         // Close suggestion modal and return focus to new entry modal
         closeSuggestionModal();
@@ -1128,9 +1167,10 @@
     
     const formData = new FormData(this);
     const foodItem = formData.get('food_item').trim();
+    const quantity = formData.get('quantity').trim();
     const calories = formData.get('calories').trim();
     
-    if (!foodItem || !calories) {
+    if (!foodItem || !quantity || !calories) {
       alert('Please fill in all fields');
       return;
     }
